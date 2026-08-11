@@ -1,0 +1,8 @@
+﻿# Never publish readable source
+*.lua
+!*_packed.lua
+!README.md
+.cursor/
+hooks/
+tools/
+.DS_Store
