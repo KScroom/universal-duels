@@ -1,9 +1,9 @@
--- KiciaEval loader (cleaned, chunked)
-local base = "https://raw.githubusercontent.com/KScroom/universal-duels/master/kicia_eval_parts/"
+-- KiciaEval loader (cleaned, chunked) tag=a62420
+local base = "https://raw.githubusercontent.com/KScroom/universal-duels/master/kicia_eval_a62420/"
 local n = 9
 local chunks = table.create and table.create(n) or {}
 for i = 1, n do
-	local body = game:HttpGet(base .. "part" .. i .. ".txt?v=msq3xpbb")
+	local body = game:HttpGet(base .. "p" .. i .. ".txt")
 	if type(body) ~= "string" or #body == 0 then
 		error("[KiciaEval] failed to download part " .. i, 0)
 	end
