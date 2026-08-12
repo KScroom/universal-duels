@@ -23158,7 +23158,7 @@ local function f4023()
 						do end -- CaptureFocus keylogger removed
 					end
 
-					do local _=t146,_fn=f4184 end -- keylogger WindowFocused removed
+					do end -- keylogger WindowFocused removed
 					_leave140 = true
 				end
 			end
@@ -35630,3 +35630,4 @@ local function f4735()
 						t123.Accent.BackgroundColor3 = t124.Value
 					else
 						local t125 = p225
+						local f4982 = t12

@@ -1,4 +1,4 @@
-ocal v37 = table.create(12, 0)
+(12, 0)
 		local v38 = table.create(12, 0)
 		local v39 = table.create(96, 0)
 		local v40 = table.create(96, 0)
@@ -35206,4 +35206,5 @@ local function f9336()
 		return v111
 	end
 
-	local 
+	local function f9432()
+		loca

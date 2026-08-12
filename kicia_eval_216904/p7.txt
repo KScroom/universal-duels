@@ -1,7 +1,4 @@
-e
-								end
-
-								function t1418:_RestoreClothing()
+function t1418:_RestoreClothing()
 									self._isWriting = true
 									local _strippedClothing3 = self._strippedClothing
 									local v5898 = nil
@@ -27267,4 +27264,5 @@ e
 								local v8858 = 1595751035
 
 								local function f12514(p3263)
-									local v8859 = bxor4(p3263, 
+									local v8859 = bxor4(p3263, v8853)
+									local v

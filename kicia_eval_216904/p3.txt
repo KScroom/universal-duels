@@ -1,4 +1,4 @@
-						local f4982 = t125.Tween
+5.Tween
 						local Marker2 = t123.Marker
 						local t126 = { Position = v354, Size = v352, ImageTransparency = v353 }
 						f4982(t125, Marker2, t126, DragTweenInfo4)
@@ -34780,4 +34780,4 @@ local function f7069()
 	local function f7103()
 		local v35 = up0.bc()
 		local v36 = up0.bd()
-		l
+		local v37 = table.create

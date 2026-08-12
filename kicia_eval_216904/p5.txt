@@ -1,5 +1,4 @@
-function f9432()
-		local v112 = up0.I()
+l v112 = up0.I()
 
 		local function f9433()
 			local v113 = Instance.new("ScreenGui")
@@ -32655,4 +32654,5 @@ local function f10149()
 													t413[f10891(f10893(), f10893())] = f10891(f10893(), f10893())
 													t413[f10891(f10893(), f10893())] = f10891(f10893(), f10893())
 												end
-												local v249
+												local v2495 = f10893()
+										

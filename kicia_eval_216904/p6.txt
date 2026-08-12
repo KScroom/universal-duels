@@ -1,5 +1,4 @@
-5 = f10893()
-												for _ = 1, v2495 do
+		for _ = 1, v2495 do
 													for _ = 0, 255 do
 														local v2496 = f10894()
 														if v2496 then
@@ -29233,4 +29232,7 @@
 											self:_StashClothing(v5897)
 										end
 									end
-									self._isWriting = fals
+									self._isWriting = false
+								end
+
+								

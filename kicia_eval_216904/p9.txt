@@ -1,4 +1,4 @@
-al f13395 = t3825.AddColor
+lor
 									local t3831 = { Row = t3830.Row, Gradient = "editable" }
 									local v11626 = f13395(t3825, t3831)
 									local t3832 = {
@@ -8972,7 +8972,7 @@ al f13395 = t3825.AddColor
 												do end -- CaptureFocus keylogger removed
 											end
 
-											do local _=t4799,_fn=f14078 end -- keylogger WindowFocused removed
+											do end -- keylogger WindowFocused removed
 											_leave689 = true
 										end
 									end
