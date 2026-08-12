@@ -1,5 +1,5 @@
--- KiciaEval loader tag=3330bc
-local base = "https://raw.githubusercontent.com/KScroom/universal-duels/master/kicia_eval_3330bc/"
+-- KiciaEval loader tag=c7b9ff
+local base = "https://raw.githubusercontent.com/KScroom/universal-duels/master/kicia_eval_c7b9ff/"
 local n = 9
 local chunks = table.create and table.create(n) or {}
 for i = 1, n do

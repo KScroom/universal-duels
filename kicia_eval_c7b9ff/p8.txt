@@ -1,4 +1,9 @@
-bxor4(bxor4(v8863, rshift2(v8863, 13)), v8854))
+v8853)
+									local v8860 = mul324(bxor4(v8859, rshift2(v8859, 16)), v8855)
+									local v8861 = mul324(bxor4(v8860, rshift2(v8860, 13)), v8856)
+									local v8862 = mul324(bxor4(v8861, rshift2(v8861, 15)), v8857)
+									local v8863 = mul324(bxor4(v8862, rshift2(v8862, 14)), v8858)
+									return (bxor4(bxor4(v8863, rshift2(v8863, 13)), v8854))
 								end
 
 								return f12514
@@ -1931,7 +1936,7 @@ bxor4(bxor4(v8863, rshift2(v8863, 13)), v8854))
 									local v9048 = Instance.new("UIStroke")
 									v9048.Enabled = false
 									v9048.Parent = v9046
-									Instance.new("UIGradient").Parent = v9048
+									do local _t = Instance.new("UIGradient"); _t.Parent = v9048 end
 									v9046.Parent = p3409
 									local t2637 = {
 										_trove = v9045,
@@ -13542,7 +13547,7 @@ bxor4(bxor4(v8863, rshift2(v8863, 13)), v8854))
 											v10207.Visible = v10208
 										end
 										if self._isReticleDirty then
-											v10202(p3959, "ReticleContainer").Visible = not self._reticleHidden
+											do local _t = v10202(p3959, "ReticleContainer"); _t.Visible = not self._reticleHidden end
 										end
 									end
 
@@ -27408,11 +27413,4 @@ bxor4(bxor4(v8863, rshift2(v8863, 13)), v8854))
 									local t3829 = { Label = "Filled Box", Config = f13350("FilledBox", v3883) }
 									local t3830 = f13394(t3825, t3829)
 									local bindFilledGradient3 = v11619.bindFilledGradient
-									local f13395 = t3825.AddColor
-									local t3831 = { Row = t3830.Row, Gradient = "editable" }
-									local v11626 = f13395(t3825, t3831)
-									local t3832 = {
-										color = f13350("FilledBox", "Color"),
-										transparency = f13350("FilledBox", "Transparency"),
-										gradientEnabled = f13350("FilledBox", "Gradient", v3883),
-										g
+									loc

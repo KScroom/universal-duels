@@ -1,4 +1,11 @@
-radientColor = f13350("FilledBox", "Gradient", "Color")
+al f13395 = t3825.AddColor
+									local t3831 = { Row = t3830.Row, Gradient = "editable" }
+									local v11626 = f13395(t3825, t3831)
+									local t3832 = {
+										color = f13350("FilledBox", "Color"),
+										transparency = f13350("FilledBox", "Transparency"),
+										gradientEnabled = f13350("FilledBox", "Gradient", v3883),
+										gradientColor = f13350("FilledBox", "Gradient", "Color")
 									}
 									bindFilledGradient3(v11626, t3832)
 									local f13396 = t3825.AddToggle

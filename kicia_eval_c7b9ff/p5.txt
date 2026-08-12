@@ -1,4 +1,19 @@
-434()
+function f9432()
+		local v112 = up0.I()
+
+		local function f9433()
+			local v113 = Instance.new("ScreenGui")
+			v113.IgnoreGuiInset = true
+			v113.ResetOnSpawn = false
+			v113.DisplayOrder = v112.Fov
+			v113.Parent = gethui()
+			return v113
+		end
+
+		return f9433
+	end
+
+	local function f9434()
 		local t105 = up0.cache.hm
 		if not t105 then
 			t105 = { c = up1() }
@@ -32640,13 +32655,4 @@ local function f10149()
 													t413[f10891(f10893(), f10893())] = f10891(f10893(), f10893())
 													t413[f10891(f10893(), f10893())] = f10891(f10893(), f10893())
 												end
-												local v2495 = f10893()
-												for _ = 1, v2495 do
-													for _ = 0, 255 do
-														local v2496 = f10894()
-														if v2496 then
-															v2496 = f10893()
-														end
-														local v2497 = t413[f10894()]
-														if not v2497 then
-															v2497
+												local v249

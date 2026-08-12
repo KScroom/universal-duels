@@ -1,4 +1,13 @@
-= p23.bias
+ocal v37 = table.create(12, 0)
+		local v38 = table.create(12, 0)
+		local v39 = table.create(96, 0)
+		local v40 = table.create(96, 0)
+		local v41 = table.create(64, 0)
+		local v42 = table.create(3, 0)
+
+		local function f7104(p22, p23, p24)
+			local weights2 = p23.weights
+			local bias2 = p23.bias
 			local inputSize2 = p23.inputSize
 			local outputSize2 = p23.outputSize(function(c0,c1,c2,c3,c4,c5)
 				return (function(T)
@@ -35197,19 +35206,4 @@ local function f9336()
 		return v111
 	end
 
-	local function f9432()
-		local v112 = up0.I()
-
-		local function f9433()
-			local v113 = Instance.new("ScreenGui")
-			v113.IgnoreGuiInset = true
-			v113.ResetOnSpawn = false
-			v113.DisplayOrder = v112.Fov
-			v113.Parent = gethui()
-			return v113
-		end
-
-		return f9433
-	end
-
-	local function f9
+	local 

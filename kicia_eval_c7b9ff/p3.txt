@@ -1,4 +1,9 @@
-		local f4983 = t127.Tween
+						local f4982 = t125.Tween
+						local Marker2 = t123.Marker
+						local t126 = { Position = v354, Size = v352, ImageTransparency = v353 }
+						f4982(t125, Marker2, t126, DragTweenInfo4)
+						local t127 = p225
+						local f4983 = t127.Tween
 						local Accent7 = t123.Accent
 						local t128 = { Size = v351, BackgroundColor3 = t124.Value }
 						f4983(t127, Accent7, t128, DragTweenInfo4)
@@ -29124,7 +29129,7 @@ local function f6675()
 				t33.BackgroundColor3 = p49.AccentColor
 			end
 			t33.Parent = v77
-			Instance.new("UICorner").Parent = t33
+			do local _t = Instance.new("UICorner"); _t.Parent = t33 end
 			local v89 = Instance.new("UIGradient")
 			v89.Rotation = 90
 			local new95 = ColorSequence.new
@@ -32869,7 +32874,7 @@ local function f6675()
 		local v424 = Instance.new("UIStroke")
 		v424.Enabled = false
 		v424.Parent = v422
-		Instance.new("UIGradient").Parent = v424
+		do local _t = Instance.new("UIGradient"); _t.Parent = v424 end
 		v422.Parent = p318
 		local t264 = {
 			_trove = v421,
@@ -32951,7 +32956,7 @@ local function f6675()
 			local v433 = Instance.new("UIStroke")
 			v433.Enabled = false
 			v433.Parent = v431
-			Instance.new("UIGradient").Parent = v433
+			do local _t = Instance.new("UIGradient"); _t.Parent = v433 end
 			v431.Parent = p321
 			local t266 = {
 				_trove = v430,
@@ -34775,13 +34780,4 @@ local function f7069()
 	local function f7103()
 		local v35 = up0.bc()
 		local v36 = up0.bd()
-		local v37 = table.create(12, 0)
-		local v38 = table.create(12, 0)
-		local v39 = table.create(96, 0)
-		local v40 = table.create(96, 0)
-		local v41 = table.create(64, 0)
-		local v42 = table.create(3, 0)
-
-		local function f7104(p22, p23, p24)
-			local weights2 = p23.weights
-			local bias2 
+		l

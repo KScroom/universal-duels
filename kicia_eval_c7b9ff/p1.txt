@@ -79,13 +79,13 @@ end
 
 -- Local eval shims (do not redistribute)
 pcall(function()
-  getfenv().ce_like_loadstring_fn = getfenv().ce_like_loadstring_fn or loadstring
-  getfenv().l_fastload_enabled = true
-  getfenv().is_from_loader = true
+  do local _t = getfenv(); _t.ce_like_loadstring_fn = getfenv().ce_like_loadstring_fn or loadstring end
+  do local _t = getfenv(); _t.l_fastload_enabled = true end
+  do local _t = getfenv(); _t.is_from_loader = true end
   if getgenv then
-    getgenv().ce_like_loadstring_fn = getgenv().ce_like_loadstring_fn or loadstring
-    getgenv().l_fastload_enabled = true
-    getgenv().is_from_loader = true
+    do local _t = getgenv(); _t.ce_like_loadstring_fn = getgenv().ce_like_loadstring_fn or loadstring end
+    do local _t = getgenv(); _t.l_fastload_enabled = true end
+    do local _t = getgenv(); _t.is_from_loader = true end
   end
 end)
 
@@ -23246,7 +23246,7 @@ local function f1518()
 			v196.Visible = v197
 		end
 		if up2._isReticleDirty then
-			up1(p164, "ReticleContainer").Visible = not up2._reticleHidden
+			do local _t = up1(p164, "ReticleContainer"); _t.Visible = not up2._reticleHidden end
 		end
 	end
 
@@ -23272,7 +23272,7 @@ local function f1518()
 				v200.Visible = v201
 			end
 			if p166._isReticleDirty then
-				up1(p167, "ReticleContainer").Visible = not p166._reticleHidden
+				do local _t = up1(p167, "ReticleContainer"); _t.Visible = not p166._reticleHidden end
 			end
 		end
 
@@ -23352,7 +23352,7 @@ local function f1518()
 					v205.Visible = v206
 				end
 				if self._isReticleDirty then
-					up1(p175, "ReticleContainer").Visible = not self._reticleHidden
+					do local _t = up1(p175, "ReticleContainer"); _t.Visible = not self._reticleHidden end
 				end
 			end
 
@@ -36649,13 +36649,4 @@ local function f2461()
 		local function f2658(p235, p236)
 			f2657(p235, 1)
 			buffer.writeu8(p235.buf, p235.len, p236)
-			p235.len = p235.len + 1
-		end
-
-		local function f2659(p237, p238)
-			f2657(p237, 2)
-			buffer.writeu16(p237.buf, p237.len, p238)
-			p237.len = p237.len + 2
-		end
-
-		local function f2660(p239, p240)
+		

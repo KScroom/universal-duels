@@ -1,4 +1,13 @@
- = f10891(f10894(), f10894())
+5 = f10893()
+												for _ = 1, v2495 do
+													for _ = 0, 255 do
+														local v2496 = f10894()
+														if v2496 then
+															v2496 = f10893()
+														end
+														local v2497 = t413[f10894()]
+														if not v2497 then
+															v2497 = f10891(f10894(), f10894())
 														end
 														t413[v2496] = v2497
 														local v2498 = f10893()
@@ -29224,14 +29233,4 @@
 											self:_StashClothing(v5897)
 										end
 									end
-									self._isWriting = false
-								end
-
-								function t1418:_RestoreClothing()
-									self._isWriting = true
-									local _strippedClothing3 = self._strippedClothing
-									local v5898 = nil
-									while true do
-										local _
-										v5898, _ = _strippedClothing3(nil, v5898)
-										if v5898
+									self._isWriting = fals

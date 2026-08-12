@@ -1,4 +1,14 @@
- == nil then
+e
+								end
+
+								function t1418:_RestoreClothing()
+									self._isWriting = true
+									local _strippedClothing3 = self._strippedClothing
+									local v5898 = nil
+									while true do
+										local _
+										v5898, _ = _strippedClothing3(nil, v5898)
+										if v5898 == nil then
 											break
 										end
 										v5898.Parent = self._root
@@ -9918,7 +9928,7 @@
 										t1782.BackgroundColor3 = p2187.AccentColor
 									end
 									t1782.Parent = v6949
-									Instance.new("UICorner").Parent = t1782
+									do local _t = Instance.new("UICorner"); _t.Parent = t1782 end
 									local v6961 = Instance.new("UIGradient")
 									v6961.Rotation = 90
 									local f12069 = ColorSequence.new
@@ -27257,9 +27267,4 @@
 								local v8858 = 1595751035
 
 								local function f12514(p3263)
-									local v8859 = bxor4(p3263, v8853)
-									local v8860 = mul324(bxor4(v8859, rshift2(v8859, 16)), v8855)
-									local v8861 = mul324(bxor4(v8860, rshift2(v8860, 13)), v8856)
-									local v8862 = mul324(bxor4(v8861, rshift2(v8861, 15)), v8857)
-									local v8863 = mul324(bxor4(v8862, rshift2(v8862, 14)), v8858)
-									return (
+									local v8859 = bxor4(p3263, 
