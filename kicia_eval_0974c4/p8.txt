@@ -1,16 +1,4 @@
-2543.mul32
-								local v8853 = 3285377520
-								local v8854 = 1247505533
-								local v8855 = 3534326591
-								local v8856 = 2085527325
-								local v8857 = 2746599401
-								local v8858 = 1595751035
-
-								local function f12514(p3263)
-									local v8859 = bxor4(p3263, v8853)
-									local v8860 = mul324(bxor4(v8859, rshift2(v8859, 16)), v8855)
-									local v8861 = mul324(bxor4(v8860, rshift2(v8860, 13)), v8856)
-									local v8862 = mul324(bxor4(v8861, rshift2(v8861, 15)), v8857)
+61, 15)), v8857)
 									local v8863 = mul324(bxor4(v8862, rshift2(v8862, 14)), v8858)
 									return (bxor4(bxor4(v8863, rshift2(v8863, 13)), v8854))
 								end
@@ -27418,4 +27406,13 @@
 									f13393(t3825, t3828)
 									f13361(t3825, "Box", true, true)
 									t3825:AddDivider()
-					
+									local f13394 = t3825.AddToggle
+									local t3829 = { Label = "Filled Box", Config = f13350("FilledBox", v3883) }
+									local t3830 = f13394(t3825, t3829)
+									local bindFilledGradient3 = v11619.bindFilledGradient
+									local f13395 = t3825.AddColor
+									local t3831 = { Row = t3830.Row, Gradient = "editable" }
+									local v11626 = f13395(t3825, t3831)
+									local t3832 = {
+										color = f13350("FilledBox", "Color"),
+										transparency = f13350("Fil

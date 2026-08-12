@@ -1728,7 +1728,7 @@ local function f1()
 	end
 
 	local function f138(...)
-		(nil)[0] = nil + nil(nil)()
+		do end --[[sanitized: nil-prefix-assign]]
 		up85 = nil
 	end
 
@@ -20739,7 +20739,7 @@ local function f1518()
 					if not nil then
 						_continue60 = true
 						break
-					end(true).__mode = "v"
+					end
 					f1524 = f1524(f1525, true)
 				end
 				if _continue60 then
@@ -21062,7 +21062,7 @@ local function f1518()
 						if not nil then
 							_continue62 = true
 							break
-						end(true).__mode = "v"
+						end
 						f1543 = f1543(f1544, true)
 					end
 					if _continue62 then
@@ -24703,7 +24703,7 @@ local function f1518()
 	local function f1853(p262)
 		local v313 = up0.new("fighters.CharacterContext")
 		local t172 = { _trove = v313, _player = p262 }
-		;(nil).alive = false
+		do end --[[sanitized: nil-index-assign]]
 		t172.state = nil
 		t172.created = v313:Add(up1.new())
 		t172.died = v313:Add(up1.new())
@@ -24721,7 +24721,7 @@ local function f1518()
 		function t173.new(p263)
 			local v316 = v315.new("fighters.CharacterContext")
 			local t174 = { _trove = v316, _player = p263 }
-			;(nil).alive = false
+			do end --[[sanitized: nil-index-assign]]
 			t174.state = nil
 			t174.created = v316:Add(v314.new())
 			t174.died = v316:Add(v314.new())
@@ -32012,7 +32012,7 @@ local function f2186()
 		local _dismissing = up0._dismissing
 		if _dismissing then
 			return
-		end(nil).Position = (nil)(nil, 0)
+		end
 		_dismissing(nil, (nil)(nil, nil, nil, nil)):Play()
 	end
 
@@ -36658,4 +36658,4 @@ local function f2461()
 			p237.len = p237.len + 2
 		end
 
-		local function f26
+		local function f2660(p239, p240)

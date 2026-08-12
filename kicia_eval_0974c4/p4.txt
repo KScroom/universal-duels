@@ -1,12 +1,4 @@
-create(12, 0)
-		local v38 = table.create(12, 0)
-		local v39 = table.create(96, 0)
-		local v40 = table.create(96, 0)
-		local v41 = table.create(64, 0)
-		local v42 = table.create(3, 0)
-
-		local function f7104(p22, p23, p24)
-			local weights2 = p23.weights
+ghts2 = p23.weights
 			local bias2 = p23.bias
 			local inputSize2 = p23.inputSize
 			local outputSize2 = p23.outputSize(function(c0,c1,c2,c3,c4,c5)
@@ -7030,7 +7022,7 @@ local function f7452()
 				end
 
 				f7529 = f7529(nil, nil, f7530)
-				;(nil)[nil] = f7529
+				do end --[[sanitized: nil-prefix-assign]]
 			end(nil)()
 		end
 	end
@@ -8996,8 +8988,8 @@ local function f7452()
 				local Resolved2 = t51.Status.Resolved
 				if _status8 == Resolved2 then
 					break
-				end(nil).kind = v267(nil).error = "This Promise was not resolved in time for :now()"
-				v267 = ":now() was called at:\n\n" .. v268(nil).context = v267
+				do end --[[sanitized: chained-assign]]
+				do end --[[sanitized: chained-assign]]
 				if not Resolved2(nil) then
 					return (_status8(v269))
 				end
@@ -9248,7 +9240,7 @@ local function f7452()
 
 	local function f7713(...)
 		if up0.cache.aE then
-			(nil).c = nil
+			do end --[[sanitized: nil-index-assign]]
 			up0.cache.aE = nil
 			return (nil).c
 		end
@@ -11830,7 +11822,7 @@ local function f7452()
 		end
 
 		function t218._SelectClosestFromState(...)
-			(nil)[0] = nil + nil(nil)()
+			do end --[[sanitized: nil-prefix-assign]]
 			up85 = nil
 		end
 
@@ -34480,7 +34472,7 @@ local function f9336()
 			local _dismissing2 = p39._dismissing
 			if _dismissing2 then
 				return
-			end(nil).Position = (nil)(nil, 0)
+			end
 			_dismissing2(nil, (nil)(nil, nil, nil, nil)):Play()
 		end
 
@@ -34693,7 +34685,7 @@ local function f9336()
 				local _dismissing3 = self._dismissing
 				if _dismissing3 then
 					return
-				end(nil).Position = (nil)(nil, 0)
+				end
 				_dismissing3(nil, (nil)(nil, nil, nil, nil)):Play()
 			end
 
@@ -35200,4 +35192,18 @@ local function f9336()
 	local function f9431()
 		local v111 = Instance.new("ScreenGui")
 		v111.IgnoreGuiInset = true
-		v111.ResetOnSpawn = fal
+		v111.ResetOnSpawn = false
+		v111.DisplayOrder = up0.Fov
+		v111.Parent = gethui()
+		return v111
+	end
+
+	local function f9432()
+		local v112 = up0.I()
+
+		local function f9433()
+			local v113 = Instance.new("ScreenGui")
+			v113.IgnoreGuiInset = true
+			v113.ResetOnSpawn = false
+			v113.DisplayOrder = v112.Fov
+			v113.Parent = 

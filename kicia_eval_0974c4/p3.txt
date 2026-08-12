@@ -1,5 +1,4 @@
-ocal t126 = { Position = v354, Size = v352, ImageTransparency = v353 }
-						f4982(t125, Marker2, t126, DragTweenInfo4)
+Info4)
 						local t127 = p225
 						local f4983 = t127.Tween
 						local Accent7 = t123.Accent
@@ -13673,7 +13672,7 @@ local function f5396()
 		v482 = not not false
 		if v482 then
 			if (nil)._originalBodyColors[nil] == nil then
-			end(nil)._originalBodyColors[nil] = (nil).Color
+			end
 			return
 		end
 		local v483, t700
@@ -14070,7 +14069,7 @@ local function f5396()
 			v505 = not not false
 			if v505 then
 				if (nil)._originalBodyColors[nil] == nil then
-				end(nil)._originalBodyColors[nil] = (nil).Color
+				end
 				return
 			end
 			local v506, t710
@@ -15838,7 +15837,7 @@ local function f5931()
 		local v62
 		v62 = not not true
 		if not (v62 and 16) then
-			(nil).c = nil
+			do end --[[sanitized: nil-index-assign]]
 		end
 		up0.cache.a_ = nil
 		return (nil).c
@@ -31085,9 +31084,9 @@ local function f6675()
 		else
 			f6862 = (nil).Add
 			v262 = nil
-		end(nil).contextAdded = f6862(v262, up1.new())
-		;(nil).contextRemoved = (nil):Add(up1.new())
-		;(nil)._fighters = nil
+		end
+		do end --[[sanitized: nil-index-assign]]
+		do end --[[sanitized: nil-index-assign]]
 		setmetatable(nil, up2)
 		;(nil)._Initialize(nil)
 		return nil
@@ -31174,9 +31173,9 @@ local function f6675()
 			else
 				f6875 = (nil).Add
 				v272 = nil
-			end(nil).contextAdded = f6875(v272, v270.new())
-			;(nil).contextRemoved = (nil):Add(v270.new())
-			;(nil)._fighters = nil
+			end
+			do end --[[sanitized: nil-index-assign]]
+			do end --[[sanitized: nil-index-assign]]
 			setmetatable(nil, t140)
 			;(nil)._Initialize(nil)
 			return nil
@@ -34778,4 +34777,12 @@ local function f7069()
 	local function f7103()
 		local v35 = up0.bc()
 		local v36 = up0.bd()
-		local v37 = table.
+		local v37 = table.create(12, 0)
+		local v38 = table.create(12, 0)
+		local v39 = table.create(96, 0)
+		local v40 = table.create(96, 0)
+		local v41 = table.create(64, 0)
+		local v42 = table.create(3, 0)
+
+		local function f7104(p22, p23, p24)
+			local wei

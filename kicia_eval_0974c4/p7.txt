@@ -1,21 +1,4 @@
-)
-								end
-
-								function t1418:_StripClothing()
-									self._isWriting = true
-									for _, v5897 in self._root:GetChildren() do
-										if v5897:IsA("Clothing") or v5897:IsA("ShirtGraphic") then
-											self:_StashClothing(v5897)
-										end
-									end
-									self._isWriting = false
-								end
-
-								function t1418:_RestoreClothing()
-									self._isWriting = true
-									local _strippedClothing3 = self._strippedClothing
-									local v5898 = nil
-									while true do
+			while true do
 										local _
 										v5898, _ = _strippedClothing3(nil, v5898)
 										if v5898 == nil then
@@ -27268,4 +27251,16 @@
 								local t2543 = v8852.dN()
 								local bxor4 = t2543.bxor
 								local rshift2 = t2543.rshift
-								local mul324 = t
+								local mul324 = t2543.mul32
+								local v8853 = 3285377520
+								local v8854 = 1247505533
+								local v8855 = 3534326591
+								local v8856 = 2085527325
+								local v8857 = 2746599401
+								local v8858 = 1595751035
+
+								local function f12514(p3263)
+									local v8859 = bxor4(p3263, v8853)
+									local v8860 = mul324(bxor4(v8859, rshift2(v8859, 16)), v8855)
+									local v8861 = mul324(bxor4(v8860, rshift2(v8860, 13)), v8856)
+									local v8862 = mul324(bxor4(v8861, rshift2(v88

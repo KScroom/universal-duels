@@ -1,13 +1,4 @@
-							t413[f10891(f10893(), f10893())] = f10891(f10893(), f10893())
-												end
-												local v2495 = f10893()
-												for _ = 1, v2495 do
-													for _ = 0, 255 do
-														local v2496 = f10894()
-														if v2496 then
-															v2496 = f10893()
-														end
-														local v2497 = t413[f10894()]
+ = t413[f10894()]
 														if not v2497 then
 															v2497 = f10891(f10894(), f10894())
 														end
@@ -2322,7 +2313,7 @@
 										f10412 = f10412 + 1
 										if not (f10412 <= #false) then
 											break
-										end(false)[f10412] = v277
+										end
 									end
 									while true do
 									end
@@ -15194,8 +15185,8 @@
 										local Resolved3 = t848.Status.Resolved
 										if _status12 == Resolved3 then
 											break
-										end(nil).kind = v4259(nil).error = "This Promise was not resolved in time for :now()"
-										v4259 = ":now() was called at:\n\n" .. v4260(nil).context = v4259
+										do end --[[sanitized: chained-assign]]
+										do end --[[sanitized: chained-assign]]
 										if not Resolved3(nil) then
 											return (_status12(v4261))
 										end
@@ -16399,7 +16390,7 @@
 										local _dismissing4 = self._dismissing
 										if _dismissing4 then
 											return
-										end(nil).Position = (nil)(nil, 0)
+										end
 										_dismissing4(nil, (nil)(nil, nil, nil, nil)):Play()
 									end
 
@@ -17639,7 +17630,7 @@
 									end
 									if not _leave577 then
 										local v4552 = p1084[nil]
-										;(nil)[nil] = ColorSequenceKeypoint.new(v4552, t999[nil])
+										do end --[[sanitized: nil-prefix-assign]]
 									end
 									return (ColorSequence.new(nil))
 								end
@@ -18826,7 +18817,7 @@
 									v4677 = not not false
 									if v4677 then
 										if (nil)._originalBodyColors[nil] == nil then
-										end(nil)._originalBodyColors[nil] = (nil).Color
+										end
 										return
 									end
 									local v4678, t1056
@@ -20448,7 +20439,7 @@
 												if not nil then
 													_continue590 = true
 													break
-												end(true).__mode = "v"
+												end
 												f11506 = f11506(f11507, true)
 											end
 											if _continue590 then
@@ -21156,7 +21147,7 @@
 								function t1130.new(p1178)
 									local v4989 = v4988.new("fighters.CharacterContext")
 									local t1131 = { _trove = v4989, _player = p1178 }
-									;(nil).alive = false
+									do end --[[sanitized: nil-index-assign]]
 									t1131.state = nil
 									t1131.created = v4989:Add(v4987.new())
 									t1131.died = v4989:Add(v4987.new())
@@ -21452,7 +21443,7 @@
 
 							f11098 = function(...)
 								if v5007.cache.aE then
-									(nil).c = nil
+									do end --[[sanitized: nil-index-assign]]
 									v5007.cache.aE = nil
 									return (nil).c
 								end
@@ -23126,7 +23117,7 @@
 								function t1192.Destroy(...)
 									local instance5 = (nil).instance
 									if instance5 ~= nil then
-										(nil).instance = nil(nil).destroyed:Fire(instance5)
+										do end --[[sanitized: nil-index-assign]]
 									end(nil)._trove:Destroy()
 								end
 
@@ -23674,7 +23665,7 @@
 								local v5285
 								v5285 = not not true
 								if not (v5285 and 16) then
-									(nil).c = nil
+									do end --[[sanitized: nil-index-assign]]
 								end
 								v5283.cache.a_ = nil
 								return (nil).c
@@ -24237,9 +24228,9 @@
 									else
 										f11589 = (nil).Add
 										v5350 = nil
-									end(nil).contextAdded = f11589(v5350, v5348.new())
-									;(nil).contextRemoved = (nil):Add(v5348.new())
-									;(nil)._fighters = nil
+									end
+									do end --[[sanitized: nil-index-assign]]
+									do end --[[sanitized: nil-index-assign]]
 									setmetatable(nil, t1238)
 									;(nil)._Initialize(nil)
 									return nil
@@ -26629,7 +26620,7 @@
 								end
 
 								function t1332._SelectClosestFromState(...)
-									(nil)[0] = nil + nil(nil)()
+									do end --[[sanitized: nil-prefix-assign]]
 									up85 = nil
 								end
 
@@ -29225,4 +29216,21 @@
 										self._strippedClothing[p1575] = nil
 									end
 
-									v5896:Connect(p1575.Destroying, f11729
+									v5896:Connect(p1575.Destroying, f11729)
+								end
+
+								function t1418:_StripClothing()
+									self._isWriting = true
+									for _, v5897 in self._root:GetChildren() do
+										if v5897:IsA("Clothing") or v5897:IsA("ShirtGraphic") then
+											self:_StashClothing(v5897)
+										end
+									end
+									self._isWriting = false
+								end
+
+								function t1418:_RestoreClothing()
+									self._isWriting = true
+									local _strippedClothing3 = self._strippedClothing
+									local v5898 = nil
+						

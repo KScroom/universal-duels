@@ -1,18 +1,4 @@
-se
-		v111.DisplayOrder = up0.Fov
-		v111.Parent = gethui()
-		return v111
-	end
-
-	local function f9432()
-		local v112 = up0.I()
-
-		local function f9433()
-			local v113 = Instance.new("ScreenGui")
-			v113.IgnoreGuiInset = true
-			v113.ResetOnSpawn = false
-			v113.DisplayOrder = v112.Fov
-			v113.Parent = gethui()
+gethui()
 			return v113
 		end
 
@@ -7159,7 +7145,7 @@ local function f9797()
 	local function f9834(...)
 		local instance3 = (nil).instance
 		if instance3 ~= nil then
-			(nil).instance = nil(nil).destroyed:Fire(instance3)
+			do end --[[sanitized: nil-index-assign]]
 		end(nil)._trove:Destroy()
 	end
 
@@ -7199,7 +7185,7 @@ local function f9797()
 		function t46.Destroy(...)
 			local instance4 = (nil).instance
 			if instance4 ~= nil then
-				(nil).instance = nil(nil).destroyed:Fire(instance4)
+				do end --[[sanitized: nil-index-assign]]
 			end(nil)._trove:Destroy()
 		end
 
@@ -32659,4 +32645,13 @@ local function f10149()
 												local t413 = {}
 												for _ = 0, 255 do
 													t413[f10891(f10893(), f10893())] = f10891(f10893(), f10893())
-						
+													t413[f10891(f10893(), f10893())] = f10891(f10893(), f10893())
+												end
+												local v2495 = f10893()
+												for _ = 1, v2495 do
+													for _ = 0, 255 do
+														local v2496 = f10894()
+														if v2496 then
+															v2496 = f10893()
+														end
+														local v2497
