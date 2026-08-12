@@ -1,7 +1,4 @@
-			while true do
-										local _
-										v5898, _ = _strippedClothing3(nil, v5898)
-										if v5898 == nil then
+ == nil then
 											break
 										end
 										v5898.Parent = self._root
@@ -27263,4 +27260,6 @@
 									local v8859 = bxor4(p3263, v8853)
 									local v8860 = mul324(bxor4(v8859, rshift2(v8859, 16)), v8855)
 									local v8861 = mul324(bxor4(v8860, rshift2(v8860, 13)), v8856)
-									local v8862 = mul324(bxor4(v8861, rshift2(v88
+									local v8862 = mul324(bxor4(v8861, rshift2(v8861, 15)), v8857)
+									local v8863 = mul324(bxor4(v8862, rshift2(v8862, 14)), v8858)
+									return (

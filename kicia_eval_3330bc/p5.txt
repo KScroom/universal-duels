@@ -1,11 +1,4 @@
-gethui()
-			return v113
-		end
-
-		return f9433
-	end
-
-	local function f9434()
+434()
 		local t105 = up0.cache.hm
 		if not t105 then
 			t105 = { c = up1() }
@@ -32654,4 +32647,6 @@ local function f10149()
 														if v2496 then
 															v2496 = f10893()
 														end
-														local v2497
+														local v2497 = t413[f10894()]
+														if not v2497 then
+															v2497

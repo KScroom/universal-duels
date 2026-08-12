@@ -1,5 +1,4 @@
-ghts2 = p23.weights
-			local bias2 = p23.bias
+= p23.bias
 			local inputSize2 = p23.inputSize
 			local outputSize2 = p23.outputSize(function(c0,c1,c2,c3,c4,c5)
 				return (function(T)
@@ -8988,7 +8987,7 @@ local function f7452()
 				local Resolved2 = t51.Status.Resolved
 				if _status8 == Resolved2 then
 					break
-				do end --[[sanitized: chained-assign]]
+				end
 				do end --[[sanitized: chained-assign]]
 				if not Resolved2(nil) then
 					return (_status8(v269))
@@ -35206,4 +35205,11 @@ local function f9336()
 			v113.IgnoreGuiInset = true
 			v113.ResetOnSpawn = false
 			v113.DisplayOrder = v112.Fov
-			v113.Parent = 
+			v113.Parent = gethui()
+			return v113
+		end
+
+		return f9433
+	end
+
+	local function f9

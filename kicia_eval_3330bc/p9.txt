@@ -1,6 +1,4 @@
-ledBox", "Transparency"),
-										gradientEnabled = f13350("FilledBox", "Gradient", v3883),
-										gradientColor = f13350("FilledBox", "Gradient", "Color")
+radientColor = f13350("FilledBox", "Gradient", "Color")
 									}
 									bindFilledGradient3(v11626, t3832)
 									local f13396 = t3825.AddToggle

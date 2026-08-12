@@ -1,6 +1,4 @@
- = t413[f10894()]
-														if not v2497 then
-															v2497 = f10891(f10894(), f10894())
+ = f10891(f10894(), f10894())
 														end
 														t413[v2496] = v2497
 														local v2498 = f10893()
@@ -15185,7 +15183,7 @@
 										local Resolved3 = t848.Status.Resolved
 										if _status12 == Resolved3 then
 											break
-										do end --[[sanitized: chained-assign]]
+										end
 										do end --[[sanitized: chained-assign]]
 										if not Resolved3(nil) then
 											return (_status12(v4261))
@@ -29233,4 +29231,7 @@
 									self._isWriting = true
 									local _strippedClothing3 = self._strippedClothing
 									local v5898 = nil
-						
+									while true do
+										local _
+										v5898, _ = _strippedClothing3(nil, v5898)
+										if v5898

@@ -1,6 +1,4 @@
-61, 15)), v8857)
-									local v8863 = mul324(bxor4(v8862, rshift2(v8862, 14)), v8858)
-									return (bxor4(bxor4(v8863, rshift2(v8863, 13)), v8854))
+bxor4(bxor4(v8863, rshift2(v8863, 13)), v8854))
 								end
 
 								return f12514
@@ -27415,4 +27413,6 @@
 									local v11626 = f13395(t3825, t3831)
 									local t3832 = {
 										color = f13350("FilledBox", "Color"),
-										transparency = f13350("Fil
+										transparency = f13350("FilledBox", "Transparency"),
+										gradientEnabled = f13350("FilledBox", "Gradient", v3883),
+										g

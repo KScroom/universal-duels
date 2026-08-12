@@ -1,6 +1,4 @@
-Info4)
-						local t127 = p225
-						local f4983 = t127.Tween
+		local f4983 = t127.Tween
 						local Accent7 = t123.Accent
 						local t128 = { Size = v351, BackgroundColor3 = t124.Value }
 						f4983(t127, Accent7, t128, DragTweenInfo4)
@@ -34785,4 +34783,5 @@ local function f7069()
 		local v42 = table.create(3, 0)
 
 		local function f7104(p22, p23, p24)
-			local wei
+			local weights2 = p23.weights
+			local bias2 

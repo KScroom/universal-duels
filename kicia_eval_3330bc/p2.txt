@@ -19807,7 +19807,7 @@ local function f3730()
 			local Resolved = up0.Status.Resolved
 			if _status2 == Resolved then
 				break
-			do end --[[sanitized: chained-assign]]
+			end
 			do end --[[sanitized: chained-assign]]
 			if not Resolved(nil) then
 				return (_status2(v203))
@@ -35624,4 +35624,6 @@ local function f4735()
 						local f4982 = t125.Tween
 						local Marker2 = t123.Marker
 						local t126 = { Position = v354, Size = v352, ImageTransparency = v353 }
-						f4982(t125, Marker2, t126, DragTween
+						f4982(t125, Marker2, t126, DragTweenInfo4)
+						local t127 = p225
+				
