@@ -1,4 +1,7 @@
-591
+2543.mul32
+								local v8853 = 3285377520
+								local v8854 = 1247505533
+								local v8855 = 3534326591
 								local v8856 = 2085527325
 								local v8857 = 2746599401
 								local v8858 = 1595751035
@@ -8851,7 +8854,8 @@
 									local t2855 = v9735.Get()
 									local Notify14 = t2855.Notify
 									local v9741 = _G["table.create"](2)
-									;({}).Text = " is hacking"
+		v9741[1] = { Text = tostring(v64 or "") }
+		v9741[2] = { Text = " is hacking" }
 									local t2856 = { Color = self._color }
 									Notify14(t2855, v9741, t2856)
 								end
@@ -27414,6 +27418,4 @@
 									f13393(t3825, t3828)
 									f13361(t3825, "Box", true, true)
 									t3825:AddDivider()
-									local f13394 = t3825.AddToggle
-									local t3829 = { Label = "Filled Box", Config = f13350("FilledBox", v3883) }
-									local t3830 = f13394(t3
+					

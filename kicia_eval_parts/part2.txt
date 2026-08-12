@@ -1,4 +1,6 @@
-p239.len, p240)
+60(p239, p240)
+			f2657(p239, 4)
+			buffer.writeu32(p239.buf, p239.len, p240)
 			p239.len = p239.len + 4
 		end
 
@@ -35621,4 +35623,4 @@ local function f4735()
 						local t125 = p225
 						local f4982 = t125.Tween
 						local Marker2 = t123.Marker
-						local t126 = { Position = v354, Size = v352, ImageTransparency 
+						l

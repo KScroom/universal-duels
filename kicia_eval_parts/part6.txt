@@ -1,4 +1,6 @@
-10893()
+							t413[f10891(f10893(), f10893())] = f10891(f10893(), f10893())
+												end
+												local v2495 = f10893()
 												for _ = 1, v2495 do
 													for _ = 0, 255 do
 														local v2496 = f10894()
@@ -17494,8 +17496,8 @@
 										local t991 = v4503.Get()
 										local Notify12 = t991.Notify
 										local v4540 = _G["table.create"](2)
-										local v4541
-										v4541.Text = p1079.DisplayName({}).Text = t978[p1080]
+			v4540[1] = { Text = p1079.DisplayName }
+			v4540[2] = { Text = t978[p1080] }
 										local t992 = { Color = self._color }
 										Notify12(t991, v4540, t992)
 									end
@@ -29223,9 +29225,4 @@
 										self._strippedClothing[p1575] = nil
 									end
 
-									v5896:Connect(p1575.Destroying, f11729)
-								end
-
-								function t1418:_StripClothing()
-									self._isWriting = true
-									for _, v58
+									v5896:Connect(p1575.Destroying, f11729

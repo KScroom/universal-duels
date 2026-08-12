@@ -1,4 +1,6 @@
-825, t3829)
+				local f13394 = t3825.AddToggle
+									local t3829 = { Label = "Filled Box", Config = f13350("FilledBox", v3883) }
+									local t3830 = f13394(t3825, t3829)
 									local bindFilledGradient3 = v11619.bindFilledGradient
 									local f13395 = t3825.AddColor
 									local t3831 = { Row = t3830.Row, Gradient = "editable" }

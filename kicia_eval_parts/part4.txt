@@ -1,4 +1,7 @@
- 0)
+create(12, 0)
+		local v38 = table.create(12, 0)
+		local v39 = table.create(96, 0)
+		local v40 = table.create(96, 0)
 		local v41 = table.create(64, 0)
 		local v42 = table.create(3, 0)
 
@@ -35197,11 +35200,4 @@ local function f9336()
 	local function f9431()
 		local v111 = Instance.new("ScreenGui")
 		v111.IgnoreGuiInset = true
-		v111.ResetOnSpawn = false
-		v111.DisplayOrder = up0.Fov
-		v111.Parent = gethui()
-		return v111
-	end
-
-	local function f9432()
-		local v1
+		v111.ResetOnSpawn = fal

@@ -1,4 +1,9 @@
-97 in self._root:GetChildren() do
+)
+								end
+
+								function t1418:_StripClothing()
+									self._isWriting = true
+									for _, v5897 in self._root:GetChildren() do
 										if v5897:IsA("Clothing") or v5897:IsA("ShirtGraphic") then
 											self:_StashClothing(v5897)
 										end
@@ -27263,7 +27268,4 @@
 								local t2543 = v8852.dN()
 								local bxor4 = t2543.bxor
 								local rshift2 = t2543.rshift
-								local mul324 = t2543.mul32
-								local v8853 = 3285377520
-								local v8854 = 1247505533
-								local v8855 = 3534326
+								local mul324 = t

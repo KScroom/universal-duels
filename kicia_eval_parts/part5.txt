@@ -1,4 +1,11 @@
-12 = up0.I()
+se
+		v111.DisplayOrder = up0.Fov
+		v111.Parent = gethui()
+		return v111
+	end
+
+	local function f9432()
+		local v112 = up0.I()
 
 		local function f9433()
 			local v113 = Instance.new("ScreenGui")
@@ -32652,6 +32659,4 @@ local function f10149()
 												local t413 = {}
 												for _ = 0, 255 do
 													t413[f10891(f10893(), f10893())] = f10891(f10893(), f10893())
-													t413[f10891(f10893(), f10893())] = f10891(f10893(), f10893())
-												end
-												local v2495 = f
+						

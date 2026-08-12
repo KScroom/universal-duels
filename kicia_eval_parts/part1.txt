@@ -1,6 +1,6 @@
 -- KiciaEval (CLEANED personal eval only)
 -- Malware removed + HTTP guard (roblox.com / rbxcdn.com only)
--- Fixed decompiler "name;(...)" -> "name(...)" so loadstring works
+-- Fixed decompiler "name(...)" -> "name(...)" so loadstring works
 -- Chunked loader used on GitHub (file is ~6.7MB)
 -- Do NOT redistribute.
 
@@ -13134,7 +13134,8 @@ local function f940()
 		local t22 = up0.Get()
 		local Notify = t22.Notify
 		local v65 = _G["table.create"](2)
-		;({}).Text = " is hacking"
+		v65[1] = { Text = tostring(v64 or "") }
+		v65[2] = { Text = " is hacking" }
 		local t23 = { Color = p62._color }
 		Notify(t22, v65, t23)
 	end
@@ -21371,8 +21372,8 @@ local function f1518()
 			local t29 = up0.Get()
 			local Notify3 = t29.Notify
 			local v52 = _G["table.create"](2)
-			local v53
-			v53.Text = p31.DisplayName({}).Text = up1[p32]
+			v52[1] = { Text = p31.DisplayName }
+			v52[2] = { Text = up1[p32] }
 			local t30 = { Color = p30._color }
 			Notify3(t29, v52, t30)
 		end
@@ -22048,8 +22049,8 @@ local function f1518()
 				local t56 = v80.Get()
 				local Notify4 = t56.Notify
 				local v117 = _G["table.create"](2)
-				local v118
-				v118.Text = p59.DisplayName({}).Text = t43[p60]
+			v117[1] = { Text = p59.DisplayName }
+			v117[2] = { Text = t43[p60] }
 				local t57 = { Color = self._color }
 				Notify4(t56, v117, t57)
 			end
@@ -36657,6 +36658,4 @@ local function f2461()
 			p237.len = p237.len + 2
 		end
 
-		local function f2660(p239, p240)
-			f2657(p239, 4)
-			buffer.writeu32(p239.buf, 
+		local function f26
