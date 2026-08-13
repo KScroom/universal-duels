@@ -22,6 +22,14 @@ local Services = setmetatable({}, {
 local Players = Services.Players
 repeat task.wait() until Players.LocalPlayer
 repeat task.wait() until Players.LocalPlayer.Backpack
+print("[PTDE] EARLY MARKER player ready")
+pcall(function()
+  game:GetService("StarterGui"):SetCore("SendNotification", {
+    Title = "PTDE",
+    Text = "Script booting…",
+    Duration = 5,
+  })
+end)
 
 local StarterGui = Services.StarterGui
 do
@@ -7500,17 +7508,17 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
         print("[PTDE] Menu created — press RightShift to toggle")
 
         local Tabs = {
-            Combat = window:AddTab("Combat", "sword"),
-            Visuals = window:AddTab("Visuals", "eye"),
-            World = window:AddTab("World", "globe"),
-            Exploits = window:AddTab("Exploits", "zap"),
-            Movement = window:AddTab("Movement", "wind"),
-            Automation = window:AddTab("Automation", "cog"),
-            Misc = window:AddTab("Misc", "settings"),
-            Botting = window:AddTab("Botting", "bot"),
-            Macros = window:AddTab("Macros", "play"),
-            Interface = window:AddTab("Interface", "monitor"),
-            Config = window:AddTab("Config", "save")
+            Combat = window:AddTab("Combat"),
+            Visuals = window:AddTab("Visuals"),
+            World = window:AddTab("World"),
+            Exploits = window:AddTab("Exploits"),
+            Movement = window:AddTab("Movement"),
+            Automation = window:AddTab("Automation"),
+            Misc = window:AddTab("Misc"),
+            Botting = window:AddTab("Botting"),
+            Macros = window:AddTab("Macros"),
+            Interface = window:AddTab("Interface"),
+            Config = window:AddTab("Config")
         }
 
         do

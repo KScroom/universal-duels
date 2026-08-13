@@ -1408,7 +1408,7 @@ function Library:ChangeCursorIcon(ImageId: string)
     end
 
     local Icon = Library:GetCustomIcon(ImageId)
-    assert(Icon, "Image must be a valid Roblox asset or a valid URL or a valid lucide icon.")
+    if not Icon then warn("[PTDE] missing icon, skipping") return end
 
     CursorCustomImage.Visible = true
     CursorCustomImage.Image = Icon.Url
@@ -7612,7 +7612,7 @@ do
         }
 
         local Icon = Library:GetCustomIcon(ImageProperties.Image)
-        assert(Icon, "Image must be a valid Roblox asset or a valid URL or a valid lucide icon.")
+        if not Icon then warn("[PTDE] missing icon, skipping") return end
 
         ImageProperties.Image = Icon.Url
         ImageProperties.ImageRectOffset = Icon.ImageRectOffset
@@ -7632,7 +7632,7 @@ do
             assert(typeof(NewImage) == "string", "Image must be a string.")
 
             local Icon = Library:GetCustomIcon(NewImage)
-            assert(Icon, "Image must be a valid Roblox asset or a valid URL or a valid lucide icon.")
+            if not Icon then warn("[PTDE] missing icon, skipping") return end
 
             NewImage = Icon.Url
             Image.RectOffset = Icon.ImageRectOffset
@@ -11990,7 +11990,7 @@ function Library:CreateLoading(LoadingInfo)
 
     function Loading:SetLoadingIcon(Icon)
         local IconData = Library:GetCustomIcon(Icon)
-        assert(IconData, "Image must be a valid Roblox asset or a valid URL or a valid lucide icon.")
+        if not IconData then warn("[PTDE] missing icon, skipping") return end
 
         LoadingIcon.Image = IconData.Url
         LoadingIcon.ImageRectOffset = IconData.ImageRectOffset
