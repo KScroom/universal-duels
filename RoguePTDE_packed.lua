@@ -591,6 +591,7 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
             hold_block = false,
             hold_block_delay = 0,
             no_stun = false,
+            no_injuries = true,
             anti_confusion = false,
 
             auto_perfect_block = false,
@@ -843,9 +844,19 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
             Fearful = true
         },
         physical_injuries = {
-            BrokenLeg = false,
-            BrokenRib = false,
-            BrokenArm = false,
+            BrokenLeg = true,
+            BrokenRib = true,
+            BrokenArm = true,
+            BrokenBones = true,
+            Fracture = true,
+            Fractured = true,
+            Bleeding = true,
+            Injury = true,
+            LegInjury = true,
+            ArmInjury = true,
+            RibInjury = true,
+            TorsoInjury = true,
+            HeadInjury = true,
         },
         valid_projectiles = {
             'FlowerProjectile',
@@ -8566,17 +8577,38 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
                 })
 
 
-                group_character:AddToggle("no_insanity", {
+                group_character:AddToggle("NoInsanity", {
                     Text = "No Insane",
                     Default = cheat_client.config.no_insane,
                     Callback = function(state)
                         cheat_client.config.no_insane = state
 
-                        if state then
-                            if plr.Character then
-                                for _,v in pairs(plr.Character:GetChildren()) do
-                                    if cheat_client.mental_injuries[v.Name] then
-                                        v:Destroy()
+                        if state and plr.Character then
+                            for _,v in pairs(plr.Character:GetChildren()) do
+                                if cheat_client.mental_injuries[v.Name] then
+                                    v:Destroy()
+                                end
+                            end
+                        end
+                    end
+                })
+
+                group_character:AddToggle("NoInjuries", {
+                    Text = "No Injuries",
+                    Default = cheat_client.config.no_injuries ~= false,
+                    Callback = function(state)
+                        cheat_client.config.no_injuries = state
+                        if state and plr.Character then
+                            for _,v in pairs(plr.Character:GetChildren()) do
+                                if cheat_client.physical_injuries[v.Name] then
+                                    pcall(function() v:Destroy() end)
+                                end
+                            end
+                            local boosts = plr.Character:FindFirstChild("Boosts")
+                            if boosts then
+                                for _,v in pairs(boosts:GetChildren()) do
+                                    if cheat_client.physical_injuries[v.Name] then
+                                        pcall(function() v:Destroy() end)
                                     end
                                 end
                             end
@@ -8866,12 +8898,24 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
 
             group_flight:AddToggle("flight", {
                 Text = "Flight",
-                Tooltip = "good for flying on the ground",
+                Tooltip = "WASD + Space/Shift — CFrame fly (PTDE)",
                 Default = false,
                 Callback = function(value)
                     if value then
                         if cheat_client.start_flight_rendering then
                             cheat_client.start_flight_rendering()
+                        else
+                            task.defer(function()
+                                local t0 = os.clock()
+                                while not cheat_client.start_flight_rendering and os.clock() - t0 < 8 do
+                                    task.wait(0.1)
+                                end
+                                if cheat_client.start_flight_rendering and Toggles.flight and Toggles.flight.Value then
+                                    cheat_client.start_flight_rendering()
+                                elseif library then
+                                    library:Notify("Flight failed to start — reload script", 4)
+                                end
+                            end)
                         end
                     else
                         if cheat_client.stop_flight_rendering then
@@ -8896,10 +8940,19 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
                 Default = cheat_client.config.noclip,
                 Callback = function(value)
                     cheat_client.config.noclip = value
-                    -- PTDE noclip starts flight loop
                     if value then
                         if cheat_client.start_flight_rendering then
                             cheat_client.start_flight_rendering()
+                        else
+                            task.defer(function()
+                                local t0 = os.clock()
+                                while not cheat_client.start_flight_rendering and os.clock() - t0 < 8 do
+                                    task.wait(0.1)
+                                end
+                                if cheat_client.start_flight_rendering and Toggles.noclip and Toggles.noclip.Value then
+                                    cheat_client.start_flight_rendering()
+                                end
+                            end)
                         end
                     elseif not (Toggles and Toggles.flight and Toggles.flight.Value) then
                         if cheat_client.stop_flight_rendering then
@@ -22121,37 +22174,32 @@ if (is_gaia or is_khei) then
             local function start_flight_rendering()
                 if cheat_client.feature_connections.flight then return end
 
-                cheat_client.feature_connections.flight = utility:Connection(rs.RenderStepped, LPH_NO_VIRTUALIZE(function()
-                    local isFlightEnabled = Toggles and Toggles.flight and Toggles.flight.Value or false
-                    local isNoclipEnabled = Toggles and Toggles.noclip and Toggles.noclip.Value or false
-                    local isAutoFallEnabled = Toggles and Toggles.auto_fall and Toggles.auto_fall.Value or false
+                -- PTDE-safe: CFrame flight (server often overrides AssemblyLinearVelocity)
+                local function flightStep(dt)
+                    dt = typeof(dt) == "number" and dt or 1/60
+                    if dt > 0.1 then dt = 0.1 end
+
+                    local isFlightEnabled = Toggles and Toggles.flight and Toggles.flight.Value
+                    local isNoclipEnabled = Toggles and Toggles.noclip and Toggles.noclip.Value
+                    local isAutoFallEnabled = Toggles and Toggles.auto_fall and Toggles.auto_fall.Value
+                    if not isFlightEnabled and not isNoclipEnabled then return end
 
                     local character = plr.Character
                     if not character then return end
                     local rootPart = FindFirstChild(character, "HumanoidRootPart")
                     if not rootPart then return end
-
-                    local camCFrame = workspace.CurrentCamera.CFrame
                     local huma = FindFirstChildOfClass(character, "Humanoid")
+                    local cam = workspace.CurrentCamera
+                    if not cam then return end
 
                     if isNoclipEnabled then
-                        makeNearbyPartsTransparent(character, rootPart)
-                        for _, v in next, character:GetDescendants() do
+                        for _, v in ipairs(character:GetDescendants()) do
                             if v:IsA("BasePart") then
                                 v.CanCollide = false
-                                if v ~= rootPart then
-                                    v.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
-                                end
                             end
                         end
-                        if not was_noclip_enabled and huma then
-                            pcall(function()
-                                huma:SetStateEnabled(Enum.HumanoidStateType.FallingDown, false)
-                                huma:ChangeState(Enum.HumanoidStateType.Flying)
-                            end)
-                        end
+                        was_noclip_enabled = true
                     elseif was_noclip_enabled then
-                        restorePartTransparency()
                         for _, part in ipairs(character:GetDescendants()) do
                             if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
                                 if part.Name == "Head" or part.Name == "Torso" or part.Name == "UpperTorso" or part.Name == "LowerTorso" then
@@ -22161,65 +22209,78 @@ if (is_gaia or is_khei) then
                                 end
                             end
                         end
-                        if huma then
-                            pcall(function()
-                                huma:SetStateEnabled(Enum.HumanoidStateType.FallingDown, true)
-                                huma:ChangeState(Enum.HumanoidStateType.GettingUp)
-                            end)
-                        end
-                        if rootPart.Anchored and not isFlightEnabled then
-                            rootPart.Anchored = false
+                        was_noclip_enabled = false
+                    end
+
+                    if not isFlightEnabled then
+                        if rootPart.Anchored then rootPart.Anchored = false end
+                        return
+                    end
+
+                    -- Don't block flight just because some UI has focus (PTDE chat/UI quirks)
+                    local focused = cheat_client.custom_flight_functions["GetFocusedTextBox"](uis)
+                    if focused and focused:IsA("TextBox") and focused:IsFocused() and focused.Text ~= "" then
+                        -- still allow movement keys while empty chat
+                    end
+
+                    local move = Vector3.new()
+                    local look = cam.CFrame.LookVector
+                    local right = cam.CFrame.RightVector
+                    local flatLook = Vector3.new(look.X, 0, look.Z)
+                    if flatLook.Magnitude > 0.01 then flatLook = flatLook.Unit else flatLook = Vector3.new(0, 0, -1) end
+                    local flatRight = Vector3.new(right.X, 0, right.Z)
+                    if flatRight.Magnitude > 0.01 then flatRight = flatRight.Unit else flatRight = Vector3.new(1, 0, 0) end
+
+                    if cheat_client.custom_flight_functions["IsKeyDown"](uis, "W") then move += flatLook end
+                    if cheat_client.custom_flight_functions["IsKeyDown"](uis, "S") then move -= flatLook end
+                    if cheat_client.custom_flight_functions["IsKeyDown"](uis, "D") then move += flatRight end
+                    if cheat_client.custom_flight_functions["IsKeyDown"](uis, "A") then move -= flatRight end
+                    if cheat_client.custom_flight_functions["IsKeyDown"](uis, "Space") then move += Vector3.new(0, 1, 0) end
+                    if cheat_client.custom_flight_functions["IsKeyDown"](uis, "LeftShift") then move -= Vector3.new(0, 1, 0) end
+                    if isAutoFallEnabled and huma and huma.FloorMaterial == Enum.Material.Air
+                        and not cheat_client.custom_flight_functions["IsKeyDown"](uis, "Space") then
+                        move -= Vector3.new(0, 1, 0)
+                    end
+
+                    local speed = (Options and Options.flight_speed and Options.flight_speed.Value) or 100
+                    rootPart.Anchored = false
+                    if huma then
+                        pcall(function()
+                            huma.PlatformStand = false
+                            huma:ChangeState(Enum.HumanoidStateType.Flying)
+                        end)
+                    end
+
+                    if move.Magnitude > 0.01 then
+                        local delta = move.Unit * speed * dt
+                        rootPart.CFrame = rootPart.CFrame + delta
+                        rootPart.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+                        rootPart.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
+                    else
+                        rootPart.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+                        rootPart.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
+                    end
+                end
+
+                cheat_client.feature_connections.flight = rs.Heartbeat:Connect(flightStep)
+                cheat_client.feature_connections.flight_stepped = rs.Stepped:Connect(function()
+                    local isNoclipEnabled = Toggles and Toggles.noclip and Toggles.noclip.Value
+                    if not isNoclipEnabled then return end
+                    local character = plr.Character
+                    if not character then return end
+                    for _, v in ipairs(character:GetDescendants()) do
+                        if v:IsA("BasePart") then
+                            v.CanCollide = false
                         end
                     end
-                    was_noclip_enabled = isNoclipEnabled
+                end)
 
-                    if isFlightEnabled and not cheat_client.custom_flight_functions["GetFocusedTextBox"](uis) then
-                        local eVector = Vector3.new()
-                        local rVector, lVector = camCFrame.RightVector, camCFrame.LookVector
-                        local flatLVector = Vector3.new(lVector.X, 0, lVector.Z)
-                        if flatLVector.Magnitude > 0.01 then flatLVector = flatLVector.Unit else flatLVector = Vector3.new(0, 0, 1) end
-                        local flatRVector = Vector3.new(rVector.X, 0, rVector.Z)
-                        if flatRVector.Magnitude > 0.01 then flatRVector = flatRVector.Unit else flatRVector = Vector3.new(1, 0, 0) end
-
-                        if cheat_client.custom_flight_functions["IsKeyDown"](uis, "W") then eVector += flatLVector end
-                        if cheat_client.custom_flight_functions["IsKeyDown"](uis, "S") then eVector -= flatLVector end
-                        if cheat_client.custom_flight_functions["IsKeyDown"](uis, "D") then eVector += flatRVector end
-                        if cheat_client.custom_flight_functions["IsKeyDown"](uis, "A") then eVector -= flatRVector end
-                        local isHoldingSpace = cheat_client.custom_flight_functions["IsKeyDown"](uis, "Space")
-                        if isHoldingSpace then eVector += Vector3.new(0, 1, 0) end
-                        if cheat_client.custom_flight_functions["IsKeyDown"](uis, "LeftShift") then eVector -= Vector3.new(0, 1, 0) end
-
-                        local isInAir = huma and huma.FloorMaterial == Enum.Material.Air
-                        if isAutoFallEnabled and isInAir and not isHoldingSpace then
-                            eVector -= Vector3.new(0, 1, 0)
-                        end
-
-                        if isNoclipEnabled and rootPart.AssemblyLinearVelocity.Y < 0 and not cheat_client.custom_flight_functions["IsKeyDown"](uis, "LeftShift") then
-                            local currentVelocity = rootPart.AssemblyLinearVelocity
-                            rootPart.AssemblyLinearVelocity = Vector3.new(currentVelocity.X, 0, currentVelocity.Z)
-                        end
-
-                        if eVector.Magnitude > 0.01 then
-                            local flightSpeed = (Options and Options.flight_speed and Options.flight_speed.Value) or 100
-                            rootPart.Anchored = false
-                            rootPart.AssemblyLinearVelocity = eVector.Unit * flightSpeed
-                        else
-                            rootPart.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
-                            rootPart.Anchored = true
-                        end
-                    elseif not isFlightEnabled then
-                        if rootPart.Anchored then
-                            rootPart.Anchored = false
-                        end
-                        if isNoclipEnabled and rootPart.AssemblyLinearVelocity.Y < -1 then
-                            local v = rootPart.AssemblyLinearVelocity
-                            rootPart.AssemblyLinearVelocity = Vector3.new(v.X, 0, v.Z)
-                        end
-                    end
-                end), true)
+                pcall(function()
+                    if library then library:Notify("Flight/Noclip loop started", 2) end
+                end)
             end
 
-                        local function stop_flight_rendering()
+            local function stop_flight_rendering()
                 -- Keep loop alive if the other toggle (flight/noclip) is still on
                 local flightOn = Toggles and Toggles.flight and Toggles.flight.Value
                 local noclipOn = Toggles and Toggles.noclip and Toggles.noclip.Value
@@ -22227,20 +22288,24 @@ if (is_gaia or is_khei) then
                     return
                 end
 
+                if was_noclip_enabled then
+                    pcall(function() cheat_client:restore_state() end)
+                end
+
+                if plr.Character then
+                    local rootPart = FindFirstChild(plr.Character, "HumanoidRootPart")
+                    if rootPart and rootPart.Anchored then
+                        rootPart.Anchored = false
+                    end
+                end
+
                 if cheat_client.feature_connections.flight then
-                    if was_noclip_enabled then
-                        cheat_client:restore_state()
-                    end
-
-                    if plr.Character then
-                        local rootPart = FindFirstChild(plr.Character, "HumanoidRootPart")
-                        if rootPart and rootPart.Anchored then
-                            rootPart.Anchored = false
-                        end
-                    end
-
-                    cheat_client.feature_connections.flight:Disconnect()
+                    pcall(function() cheat_client.feature_connections.flight:Disconnect() end)
                     cheat_client.feature_connections.flight = nil
+                end
+                if cheat_client.feature_connections.flight_stepped then
+                    pcall(function() cheat_client.feature_connections.flight_stepped:Disconnect() end)
+                    cheat_client.feature_connections.flight_stepped = nil
                 end
             end
 
@@ -22301,6 +22366,11 @@ if (is_gaia or is_khei) then
                     end
 
                     if cheat_client.mental_injuries[obj.Name] and Toggles and Toggles.NoInsanity and Toggles.NoInsanity.Value then
+                        task.defer(obj.Destroy, obj)
+                        return
+                    end
+
+                    if cheat_client.physical_injuries[obj.Name] and Toggles and Toggles.NoInjuries and Toggles.NoInjuries.Value then
                         task.defer(obj.Destroy, obj)
                         return
                     end
@@ -22687,6 +22757,11 @@ if (is_gaia or is_khei) then
                     end
 
                     if cheat_client.mental_injuries[obj.Name] and Toggles and Toggles.NoInsanity and Toggles.NoInsanity.Value then
+                        task.defer(obj.Destroy, obj)
+                        return
+                    end
+
+                    if cheat_client.physical_injuries[obj.Name] and Toggles and Toggles.NoInjuries and Toggles.NoInjuries.Value then
                         task.defer(obj.Destroy, obj)
                         return
                     end
