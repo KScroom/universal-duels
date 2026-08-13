@@ -763,7 +763,7 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
             notifications = true,
             notification_volume = 5,
             ignore_friendly = false,
-            blatant_mode = false,
+            blatant_mode = (is_ptde and true) or false,
             status_effects = false,
             keybinds_ui = false,
             keybind_frame_position = nil,
@@ -3388,6 +3388,22 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
             end
 
             function cheat_client:get_name(player)
+                do
+                    local stats = FindFirstChild(player, "leaderstats") or player:FindFirstChild("leaderstatsfake")
+                    if stats and FindFirstChild(stats, "FirstName") and tostring(stats.FirstName.Value) ~= "" then
+                        local firstName = stats.FirstName.Value
+                        local lastName = FindFirstChild(stats, "LastName") and stats.LastName.Value or ""
+                        local uberTitle = FindFirstChild(stats, "UberTitle") and stats.UberTitle.Value or ""
+                        local fullName = firstName
+                        if lastName and lastName ~= "" then
+                            fullName = firstName .. " " .. lastName
+                        end
+                        if uberTitle and uberTitle ~= "" then
+                            return fullName .. ", " .. uberTitle
+                        end
+                        return fullName
+                    end
+                end
                 if is_gaia then
                     if not player:GetAttribute("FirstName") or player:GetAttribute("FirstName") == "" then
                         return "nil"
@@ -8153,11 +8169,18 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
                 Toggles.TrinketEsp:OnChanged(function()
                     if Toggles.TrinketEsp.Value then
                         cheat_client.trinket_esp_objects = cheat_client.trinket_esp_objects or {}
+                        local function consider_trinket(object)
+                            if not object or not object:IsA("BasePart") then return end
+                            if not FindFirstChild(object, "ID") then return end
+                            if cheat_client.trinket_esp_objects[object] then return end
+                            local trinket_name, trinket_color, trinket_zindex = cheat_client:identify_trinket(object)
+                            cheat_client:add_trinket_esp(object, trinket_name, trinket_color, trinket_zindex)
+                        end
                         for _, object in pairs(ws:GetChildren()) do
-                            if object.Name == "Part" and FindFirstChild(object, "ID") and not cheat_client.trinket_esp_objects[object] then
-                                local trinket_name, trinket_color, trinket_zindex = cheat_client:identify_trinket(object)
-                                cheat_client:add_trinket_esp(object, trinket_name, trinket_color, trinket_zindex)
-                            end
+                            consider_trinket(object)
+                        end
+                        for _, object in pairs(ws:GetDescendants()) do
+                            consider_trinket(object)
                         end
 
                         cheat_client.esp_rendering.start_trinket_esp()
@@ -8726,6 +8749,11 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
         do
             local group_flight = Tabs.Movement:AddLeftGroupbox("Flight")
 
+            -- PTDE Blatant on Movement
+            if is_ptde then
+                group_flight:AddLabel("Blatant Mode is also under Interface tab (auto-ON for PTDE)")
+            end
+
             group_flight:AddToggle("flight", {
                 Text = "Flight",
                 Tooltip = "good for flying on the ground",
@@ -8758,6 +8786,16 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
                 Default = cheat_client.config.noclip,
                 Callback = function(value)
                     cheat_client.config.noclip = value
+                    -- PTDE noclip starts flight loop
+                    if value then
+                        if cheat_client.start_flight_rendering then
+                            cheat_client.start_flight_rendering()
+                        end
+                    elseif not (Toggles and Toggles.flight and Toggles.flight.Value) then
+                        if cheat_client.stop_flight_rendering then
+                            cheat_client.stop_flight_rendering()
+                        end
+                    end
                 end
             }):AddKeyPicker("NoclipKeybind", {
                 Default = cheat_client.config.noclip_keybind,
@@ -19750,6 +19788,18 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
                 end
             })
 
+            -- PTDE_APPLY_BLATANT_FILTER
+            if is_ptde and shared.blatant_features then
+                local keep = {}
+                for _, name in ipairs(shared.blatant_features) do
+                    if name ~= "flight" and name ~= "better_flight" and name ~= "no_fall"
+                        and name ~= "noclip" and name ~= "auto_bag" then
+                        table.insert(keep, name)
+                    end
+                end
+                shared.blatant_features = keep
+                cheat_client.config.blatant_mode = true
+            end
             group_ui:AddToggle("blatant_mode", {
                 Text = "Blatant Mode",
                 Default = cheat_client.config.blatant_mode,
@@ -19759,30 +19809,19 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
                     local function updateBlatantFeature(featureName)
                         local toggle = Toggles[featureName]
                         if not toggle then return end
-
-                        if state then
-                            toggle:SetDisabled(false)
-
-                            if toggle.Value ~= nil then
-                                toggle:SetValue(toggle.Value)
+                        pcall(function()
+                            if state then
+                                if toggle.SetDisabled then toggle:SetDisabled(false) end
+                                if toggle.Value ~= nil and toggle.SetValue then
+                                    toggle:SetValue(toggle.Value)
+                                end
+                            else
+                                if toggle.Value and toggle.SetValue then
+                                    toggle:SetValue(false)
+                                end
+                                if toggle.SetDisabled then toggle:SetDisabled(true) end
                             end
-
-                            if toggle.TextLabel then
-                                toggle.TextLabel.TextColor3 = Library.Scheme.FontColor
-                                Library.Registry[toggle.TextLabel].TextColor3 = "FontColor"
-                            end
-                        else
-                            if toggle.Value then
-                                toggle:SetValue(false)
-                            end
-
-                            toggle:SetDisabled(true)
-
-                            if toggle.TextLabel then
-                                toggle.TextLabel.TextColor3 = Library.Scheme.Red
-                                Library.Registry[toggle.TextLabel].TextColor3 = "Red"
-                            end
-                        end
+                        end)
                     end
 
                     for _, featureName in pairs(shared.blatant_features) do
@@ -19792,7 +19831,20 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
             })
 
             if Toggles.blatant_mode then
-                Toggles.blatant_mode:SetValue(cheat_client.config.blatant_mode)
+                pcall(function()
+                    Toggles.blatant_mode:SetValue(cheat_client.config.blatant_mode)
+                end)
+            end
+            -- PTDE force enable movement toggles
+            if is_ptde then
+                for _, name in ipairs({"flight", "noclip", "no_fall", "better_flight", "auto_bag", "auto_fall"}) do
+                    local t = Toggles[name]
+                    if t and t.SetDisabled then
+                        pcall(function()
+                            t:SetDisabled(false)
+                        end)
+                    end
+                end
             end
 
             group_ui:AddDivider()
@@ -23028,6 +23080,22 @@ if (is_gaia or is_khei) then
                             end
                         end
                     end
+                    -- PTDE leaderboard text fallback
+                    local text = tostring(label.Text or "")
+                    for _, player in ipairs(plrs:GetPlayers()) do
+                        local okName, display = pcall(function()
+                            return cheat_client:get_name(player)
+                        end)
+                        local first = okName and display and tostring(display):match("^([^,]+)") or ""
+                        first = first:gsub("%s+$", "")
+                        if text == player.Name
+                            or (first ~= "" and first ~= "nil" and string.find(text, first, 1, true))
+                            or string.find(text, player.Name, 1, true) then
+                            playerLabels[label] = player
+                            updatePlayerLabel(player, label)
+                            return
+                        end
+                    end
                 end)
             end)
 
@@ -25397,10 +25465,16 @@ end
                 auto_trinket_enabled = true
 
                 trinkets = {}
-                for _,object in next, ws:GetChildren() do
-                    if object.Name == "Part" and FindFirstChild(object, "ID") then
+                local function add_tr(object)
+                    if object and object:IsA("BasePart") and FindFirstChild(object, "ID") then
                         trinkets[#trinkets + 1] = object
                     end
+                end
+                for _, object in next, ws:GetChildren() do
+                    add_tr(object)
+                end
+                for _, object in next, ws:GetDescendants() do
+                    add_tr(object)
                 end
 
                 cheat_client.feature_connections.auto_trinket = utility:Connection(rs.Heartbeat, LPH_NO_VIRTUALIZE(function(delta_time)
@@ -25644,20 +25718,27 @@ end
             local function start_auto_bag()
                 if cheat_client.feature_connections.auto_bag then return end
 
+                local thrown = ws:FindFirstChild("Thrown") or ws:FindFirstChild("Debris")
+                if not thrown then
+                    warn("[PTDE] Thrown folder missing — auto bag disabled")
+                    if library then pcall(function() library:Notify("No Thrown folder for auto bag", 3) end) end
+                    return
+                end
+
                 bags = {}
-                for _, object in ipairs(ws.Thrown:GetChildren()) do
+                for _, object in ipairs(thrown:GetChildren()) do
                     if isValidBag(object) then
                         bags[#bags + 1] = object
                     end
                 end
 
-                cheat_client.feature_connections.auto_bag_child_added = utility:Connection(ws.Thrown.ChildAdded, function(object)
+                cheat_client.feature_connections.auto_bag_child_added = utility:Connection(thrown.ChildAdded, function(object)
                     if isValidBag(object) then
                         bags[#bags + 1] = object
                     end
                 end)
 
-                cheat_client.feature_connections.auto_bag_child_removed = utility:Connection(ws.Thrown.ChildRemoved, function(object)
+                cheat_client.feature_connections.auto_bag_child_removed = utility:Connection(thrown.ChildRemoved, function(object)
                     for i = #bags, 1, -1 do
                         if bags[i] == object then
                             table.remove(bags, i)
