@@ -643,7 +643,14 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
             trinket_esp = true,
             trinket_show_area = true,
             trinket_range = 1000,
-            trinket_types = {
+            -- PTDE default: only highlight mythics / artifacts / event (+ unknown extras as Event)
+            trinket_types = (is_ptde and {
+                ["Common"] = false,
+                ["Rare"] = false,
+                ["Mythic"] = true,
+                ["Artifact"] = true,
+                ["Event"] = true
+            }) or {
                 ["Common"] = true,
                 ["Rare"] = true,
                 ["Mythic"] = true,
@@ -4997,6 +5004,68 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
 
                     return "Opal", cheat_client.trinket_colors.none.Color, cheat_client.trinket_colors.none.ZIndex
                 end
+
+                -- Force-highlight map: all mythics / artifacts / events (+ PTDE unknowns as Event)
+                cheat_client.highlight_trinket_tiers = {
+                    ["Rift Gem"] = "mythic",
+                    ["Mysterious Artifact"] = "mythic",
+                    ["Azael Horn"] = "mythic",
+                    ["Phoenix Flower"] = "mythic",
+                    ["Amulet of the White King"] = "artifact",
+                    ["Lannis Amulet"] = "artifact",
+                    ["Lannis's Amulet"] = "artifact",
+                    ["Phoenix Down"] = "artifact",
+                    ["Night Stone"] = "artifact",
+                    ["Howler Friend"] = "artifact",
+                    ["Spider Cloak"] = "artifact",
+                    ["Philosophers Stone"] = "artifact",
+                    ["Fairfrozen"] = "artifact",
+                    ["Scroll of Fimbulvetr"] = "artifact",
+                    ["Scroll of Percutiens"] = "artifact",
+                    ["Scroll of Hoppa"] = "artifact",
+                    ["Scroll of Snarvindur"] = "artifact",
+                    ["Scroll of Manus Dei"] = "artifact",
+                    ["Ornament"] = "event",
+                    ["Present"] = "event",
+                    ["Candy"] = "event",
+                    ["Scary Mask"] = "event",
+                    ["Pumpkin Centerpiece"] = "event",
+                }
+
+                function cheat_client:classify_highlight_trinket(object, name, color, zindex, is_dinket)
+                    local colors = cheat_client.trinket_colors
+                    name = name or "Unknown"
+
+                    local tier = cheat_client.highlight_trinket_tiers[name]
+                    if tier and colors[tier] then
+                        return name, colors[tier].Color, colors[tier].ZIndex
+                    end
+
+                    -- Already identified as mythic/artifact/event by mesh logic
+                    if color == colors.mythic.Color or color == colors.artifact.Color or color == colors.event.Color then
+                        return name, color, zindex
+                    end
+
+                    -- PTDE extras / unidentified world pickups → show under Event filter
+                    if is_ptde and (is_dinket or color == colors.none.Color or name == "Opal" or name == "Dinket" or name == "Unknown") then
+                        local parent = object and object.Parent
+                        if (not name or name == "Opal" or name == "Dinket" or name == "Unknown") and parent and parent ~= ws and parent.Name ~= "Dinkets" and parent.Name ~= "" and parent.Name ~= "Part" and parent.Name ~= "ClickPart" then
+                            name = parent.Name
+                        elseif (not name or name == "Opal" or name == "Dinket") and object and object.Name ~= "ClickPart" and object.Name ~= "Part" and object.Name ~= "" then
+                            name = object.Name
+                        elseif not name or name == "Opal" then
+                            name = "Unknown Extra"
+                        end
+                        -- Prefer mapped tier if parent/object name matched a known item
+                        tier = cheat_client.highlight_trinket_tiers[name]
+                        if tier and colors[tier] then
+                            return name, colors[tier].Color, colors[tier].ZIndex
+                        end
+                        return name, colors.event.Color, colors.event.ZIndex
+                    end
+
+                    return name, color, zindex
+                end
         
                 function cheat_client:add_trinket_esp(trinket, name, color, zindex)
                     local esp = {
@@ -8196,19 +8265,7 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
                             local is_dinket = is_ptde and under_folder(object, "Dinkets") and (FindFirstChild(object, "ClickDetector") ~= nil or object.Name == "ClickPart")
                             if not has_id and not is_dinket then return end
                             local trinket_name, trinket_color, trinket_zindex = cheat_client:identify_trinket(object)
-                            if is_dinket and (not trinket_name or trinket_name == "Opal") then
-                                -- Prefer parent model/name when mesh ID unknown
-                                local parent = object.Parent
-                                if parent and parent ~= ws and parent.Name ~= "Dinkets" and parent.Name ~= "" and parent.Name ~= "Part" then
-                                    trinket_name = parent.Name
-                                elseif object.Name ~= "ClickPart" and object.Name ~= "Part" then
-                                    trinket_name = object.Name
-                                else
-                                    trinket_name = "Dinket"
-                                end
-                                trinket_color = cheat_client.trinket_colors.common.Color
-                                trinket_zindex = cheat_client.trinket_colors.common.ZIndex
-                            end
+                            trinket_name, trinket_color, trinket_zindex = cheat_client:classify_highlight_trinket(object, trinket_name, trinket_color, trinket_zindex, is_dinket)
                             cheat_client:add_trinket_esp(object, trinket_name, trinket_color, trinket_zindex)
                         end
                         for _, object in pairs(ws:GetChildren()) do
@@ -8239,7 +8296,7 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
                 group_misc_esp:AddDropdown("TrinketTypes", {
                     Text = "Show Types",
                     Values = {"Common", "Rare", "Mythic", "Artifact", "Event"},
-                    Default = {1, 2, 3, 4, 5},
+                    Default = is_ptde and {3, 4, 5} or {1, 2, 3, 4, 5},
                     Multi = true,
                     Callback = function(value)
                         cheat_client.config.trinket_types = value
@@ -22525,15 +22582,8 @@ if (is_gaia or is_khei) then
                     if is_dinket then return end
                 end
                 local trinket_name, trinket_color, trinket_zindex = cheat_client:identify_trinket(object)
-                if is_dinket and (not trinket_name or trinket_name == "Opal") then
-                    local parent = object.Parent
-                    if parent and parent ~= ws and parent.Name ~= "Dinkets" and parent.Name ~= "" and parent.Name ~= "Part" then
-                        trinket_name = parent.Name
-                    else
-                        trinket_name = (object.Name ~= "ClickPart" and object.Name ~= "Part") and object.Name or "Dinket"
-                    end
-                    trinket_color = cheat_client.trinket_colors.common.Color
-                    trinket_zindex = cheat_client.trinket_colors.common.ZIndex
+                if cheat_client.classify_highlight_trinket then
+                    trinket_name, trinket_color, trinket_zindex = cheat_client:classify_highlight_trinket(object, trinket_name, trinket_color, trinket_zindex, is_dinket)
                 end
                 cheat_client:add_trinket_esp(object, trinket_name, trinket_color, trinket_zindex)
             end
