@@ -440,7 +440,10 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
 
     local updatePlayerLabel, getPlayerColor
     local last_area_restore = nil
-    local ingredient_folder = nil
+    local ingredient_folder = (is_ptde and ws:FindFirstChild("Ingredients")) or nil
+    if is_ptde and ingredient_folder then
+        print("[PTDE] Ingredients folder bound early (" .. #ingredient_folder:GetChildren() .. " kids)")
+    end
     local auto_pot_active = false
     local auto_craft_active = false
     local was_noclip_enabled = false
@@ -5311,12 +5314,21 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
                     cheat_client.ingredient_esp_objects = cheat_client.ingredient_esp_objects or {}
 
                     function cheat_client:identify_ingredient(object)
-                        local asset_id = gethiddenproperty(object, "AssetId"):gsub("%%20", ""):match("%d+")
-                        local matched_ingredient = cheat_client.ingredient_identifiers[asset_id]
-            
+                        local matched_ingredient = nil
+                        local ok, asset_id = pcall(function()
+                            return gethiddenproperty(object, "AssetId"):gsub("%%20", ""):match("%d+")
+                        end)
+                        if ok and asset_id and cheat_client.ingredient_identifiers then
+                            matched_ingredient = cheat_client.ingredient_identifiers[asset_id]
+                        end
                         if matched_ingredient then
                             return matched_ingredient
                         end
+                        -- PTDE / named world plants
+                        if object and object.Name and object.Name ~= "" and object.Name ~= "Part" then
+                            return object.Name
+                        end
+                        return "Unknown"
                     end
         
                     function cheat_client:add_ingredient_esp(ingredient, name)
@@ -8169,11 +8181,34 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
                 Toggles.TrinketEsp:OnChanged(function()
                     if Toggles.TrinketEsp.Value then
                         cheat_client.trinket_esp_objects = cheat_client.trinket_esp_objects or {}
+                        local function under_folder(object, folderName)
+                            local p = object and object.Parent
+                            while p and p ~= ws do
+                                if p.Name == folderName then return true end
+                                p = p.Parent
+                            end
+                            return false
+                        end
                         local function consider_trinket(object)
                             if not object or not object:IsA("BasePart") then return end
-                            if not FindFirstChild(object, "ID") then return end
                             if cheat_client.trinket_esp_objects[object] then return end
+                            local has_id = FindFirstChild(object, "ID") ~= nil
+                            local is_dinket = is_ptde and under_folder(object, "Dinkets") and (FindFirstChild(object, "ClickDetector") ~= nil or object.Name == "ClickPart")
+                            if not has_id and not is_dinket then return end
                             local trinket_name, trinket_color, trinket_zindex = cheat_client:identify_trinket(object)
+                            if is_dinket and (not trinket_name or trinket_name == "Opal") then
+                                -- Prefer parent model/name when mesh ID unknown
+                                local parent = object.Parent
+                                if parent and parent ~= ws and parent.Name ~= "Dinkets" and parent.Name ~= "" and parent.Name ~= "Part" then
+                                    trinket_name = parent.Name
+                                elseif object.Name ~= "ClickPart" and object.Name ~= "Part" then
+                                    trinket_name = object.Name
+                                else
+                                    trinket_name = "Dinket"
+                                end
+                                trinket_color = cheat_client.trinket_colors.common.Color
+                                trinket_zindex = cheat_client.trinket_colors.common.ZIndex
+                            end
                             cheat_client:add_trinket_esp(object, trinket_name, trinket_color, trinket_zindex)
                         end
                         for _, object in pairs(ws:GetChildren()) do
@@ -8319,9 +8354,12 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
                 Toggles.IngredientEsp:OnChanged(function()
                     if Toggles.IngredientEsp.Value then
                         cheat_client.ingredient_esp_objects = cheat_client.ingredient_esp_objects or {}
+                        if not ingredient_folder then
+                            ingredient_folder = ws:FindFirstChild("Ingredients")
+                        end
                         if ingredient_folder then
                             for _, object in pairs(ingredient_folder:GetChildren()) do
-                                if not cheat_client.ingredient_esp_objects[object] then
+                                if object:IsA("BasePart") and not cheat_client.ingredient_esp_objects[object] then
                                     local ingredient_name = cheat_client:identify_ingredient(object)
                                     cheat_client:add_ingredient_esp(object, ingredient_name)
                                 end
@@ -8751,7 +8789,7 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
 
             -- PTDE Blatant on Movement
             if is_ptde then
-                group_flight:AddLabel("Blatant Mode is also under Interface tab (auto-ON for PTDE)")
+                group_flight:AddLabel("Blatant Mode is under Misc tab (auto-ON for PTDE)")
             end
 
             group_flight:AddToggle("flight", {
@@ -9757,6 +9795,70 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
 
         do
             local group_misc = Tabs.Misc:AddLeftGroupbox("Misc Settings")
+
+            -- Blatant lives here so Macros/Interface failures cannot hide it
+            do
+                if is_ptde and shared.blatant_features then
+                    local keep = {}
+                    for _, name in ipairs(shared.blatant_features) do
+                        if name ~= "flight" and name ~= "better_flight" and name ~= "no_fall"
+                            and name ~= "noclip" and name ~= "auto_bag" then
+                            table.insert(keep, name)
+                        end
+                    end
+                    shared.blatant_features = keep
+                    cheat_client.config.blatant_mode = true
+                end
+
+                group_misc:AddToggle("blatant_mode", {
+                    Text = "Blatant Mode",
+                    Default = cheat_client.config.blatant_mode,
+                    Callback = function(state)
+                        cheat_client.config.blatant_mode = state
+
+                        local function updateBlatantFeature(featureName)
+                            local toggle = Toggles[featureName]
+                            if not toggle then return end
+                            pcall(function()
+                                if state then
+                                    if toggle.SetDisabled then toggle:SetDisabled(false) end
+                                    if toggle.Value ~= nil and toggle.SetValue then
+                                        toggle:SetValue(toggle.Value)
+                                    end
+                                else
+                                    if toggle.Value and toggle.SetValue then
+                                        toggle:SetValue(false)
+                                    end
+                                    if toggle.SetDisabled then toggle:SetDisabled(true) end
+                                end
+                            end)
+                        end
+
+                        for _, featureName in pairs(shared.blatant_features or {}) do
+                            updateBlatantFeature(featureName)
+                        end
+                    end
+                })
+
+                if Toggles.blatant_mode then
+                    pcall(function()
+                        Toggles.blatant_mode:SetValue(cheat_client.config.blatant_mode)
+                    end)
+                end
+
+                if is_ptde then
+                    for _, name in ipairs({"flight", "noclip", "no_fall", "better_flight", "auto_bag", "auto_fall"}) do
+                        local t = Toggles[name]
+                        if t and t.SetDisabled then
+                            pcall(function()
+                                t:SetDisabled(false)
+                            end)
+                        end
+                    end
+                end
+
+                group_misc:AddDivider()
+            end
 
             local function wait_danger()
                 while shared and not shared.is_unloading and cs:HasTag(plr.Character, "Danger") and not (Toggles and Toggles.ignore_danger and Toggles.ignore_danger.Value) do
@@ -19102,7 +19204,21 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
             local current_script_file = ""
 
             group_builder:AddLabel("Current Actions")
-            local actions_list = group_builder:AddActionList({ Height = 100 })
+            local actions_list
+            do
+                local okList, listOrErr = pcall(function()
+                    return group_builder:AddActionList({ Height = 100 })
+                end)
+                if okList and listOrErr then
+                    actions_list = listOrErr
+                else
+                    warn("[PTDE] AddActionList missing — macros list stubbed:", listOrErr)
+                    group_builder:AddLabel("(Action list UI unavailable on this library)")
+                    actions_list = {
+                        SetActions = function() end,
+                    }
+                end
+            end
             group_builder:AddDivider()
 
             group_builder:AddDropdown("MacroActionType", {
@@ -19788,63 +19904,11 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
                 end
             })
 
-            -- PTDE_APPLY_BLATANT_FILTER
-            if is_ptde and shared.blatant_features then
-                local keep = {}
-                for _, name in ipairs(shared.blatant_features) do
-                    if name ~= "flight" and name ~= "better_flight" and name ~= "no_fall"
-                        and name ~= "noclip" and name ~= "auto_bag" then
-                        table.insert(keep, name)
-                    end
-                end
-                shared.blatant_features = keep
-                cheat_client.config.blatant_mode = true
-            end
-            group_ui:AddToggle("blatant_mode", {
-                Text = "Blatant Mode",
-                Default = cheat_client.config.blatant_mode,
-                Callback = function(state)
-                    cheat_client.config.blatant_mode = state
-
-                    local function updateBlatantFeature(featureName)
-                        local toggle = Toggles[featureName]
-                        if not toggle then return end
-                        pcall(function()
-                            if state then
-                                if toggle.SetDisabled then toggle:SetDisabled(false) end
-                                if toggle.Value ~= nil and toggle.SetValue then
-                                    toggle:SetValue(toggle.Value)
-                                end
-                            else
-                                if toggle.Value and toggle.SetValue then
-                                    toggle:SetValue(false)
-                                end
-                                if toggle.SetDisabled then toggle:SetDisabled(true) end
-                            end
-                        end)
-                    end
-
-                    for _, featureName in pairs(shared.blatant_features) do
-                        updateBlatantFeature(featureName)
-                    end
-                end
-            })
-
-            if Toggles.blatant_mode then
-                pcall(function()
-                    Toggles.blatant_mode:SetValue(cheat_client.config.blatant_mode)
-                end)
-            end
-            -- PTDE force enable movement toggles
-            if is_ptde then
-                for _, name in ipairs({"flight", "noclip", "no_fall", "better_flight", "auto_bag", "auto_fall"}) do
-                    local t = Toggles[name]
-                    if t and t.SetDisabled then
-                        pcall(function()
-                            t:SetDisabled(false)
-                        end)
-                    end
-                end
+            -- Blatant Mode already created under Misc (avoid duplicate toggle name)
+            if not Toggles.blatant_mode then
+                group_ui:AddLabel("Blatant Mode is under Misc tab")
+            else
+                group_ui:AddLabel("Blatant Mode: see Misc tab")
             end
 
             group_ui:AddDivider()
@@ -22246,14 +22310,17 @@ if (is_gaia or is_khei) then
 
             do
                 if not is_khei then
+                    if not ingredient_folder then
+                        ingredient_folder = ws:FindFirstChild("Ingredients")
+                    end
                     for index, instance in next, ws:GetChildren() do
                         if ingredient_folder then 
                             break
                         end
             
-                        if instance.ClassName == "Folder" then
+                        if instance.ClassName == "Folder" or instance.Name == "Ingredients" then
                             for index, ingredient in next, instance:GetChildren() do
-                                if ingredient.ClassName == "UnionOperation" and FindFirstChild(ingredient, "ClickDetector") and FindFirstChild(ingredient, "Blacklist") then
+                                if FindFirstChild(ingredient, "ClickDetector") and FindFirstChild(ingredient, "Blacklist") then
                                     ingredient_folder = instance
                                     break
                                 end
@@ -22263,8 +22330,10 @@ if (is_gaia or is_khei) then
         
                     if ingredient_folder then
                         for _,object in next, ingredient_folder:GetChildren() do
-                            local ingredient_name = cheat_client:identify_ingredient(object)
-                            cheat_client:add_ingredient_esp(object, ingredient_name)
+                            if object:IsA("BasePart") then
+                                local ingredient_name = cheat_client:identify_ingredient(object)
+                                cheat_client:add_ingredient_esp(object, ingredient_name)
+                            end
                         end
                     end
                 end
@@ -22437,12 +22506,62 @@ if (is_gaia or is_khei) then
         end
     
         do
+            local function consider_live_trinket(object)
+                if not cheat_client or not object or not object:IsA("BasePart") then return end
+                if cheat_client.trinket_esp_objects and cheat_client.trinket_esp_objects[object] then return end
+                local has_id = FindFirstChild(object, "ID") ~= nil
+                local in_dinkets = false
+                do
+                    local p = object.Parent
+                    while p and p ~= ws do
+                        if p.Name == "Dinkets" then in_dinkets = true break end
+                        p = p.Parent
+                    end
+                end
+                local is_dinket = is_ptde and in_dinkets and (FindFirstChild(object, "ClickDetector") ~= nil or object.Name == "ClickPart")
+                if not has_id and not is_dinket then return end
+                if not (Toggles and Toggles.TrinketEsp and Toggles.TrinketEsp.Value) and not has_id then
+                    -- still register classic ID parts; dinkets only when ESP on
+                    if is_dinket then return end
+                end
+                local trinket_name, trinket_color, trinket_zindex = cheat_client:identify_trinket(object)
+                if is_dinket and (not trinket_name or trinket_name == "Opal") then
+                    local parent = object.Parent
+                    if parent and parent ~= ws and parent.Name ~= "Dinkets" and parent.Name ~= "" and parent.Name ~= "Part" then
+                        trinket_name = parent.Name
+                    else
+                        trinket_name = (object.Name ~= "ClickPart" and object.Name ~= "Part") and object.Name or "Dinket"
+                    end
+                    trinket_color = cheat_client.trinket_colors.common.Color
+                    trinket_zindex = cheat_client.trinket_colors.common.ZIndex
+                end
+                cheat_client:add_trinket_esp(object, trinket_name, trinket_color, trinket_zindex)
+            end
+
             utility:Connection(ws.ChildAdded, function(object)
-                if object.Name == "Part" and FindFirstChild(object, "ID") and cheat_client then
-                    local trinket_name, trinket_color, trinket_zindex = cheat_client:identify_trinket(object)
-                    cheat_client:add_trinket_esp(object, trinket_name, trinket_color, trinket_zindex)
+                if object.Name == "Part" and FindFirstChild(object, "ID") then
+                    consider_live_trinket(object)
+                elseif is_ptde and object.Name == "Dinkets" then
+                    for _, d in ipairs(object:GetDescendants()) do
+                        consider_live_trinket(d)
+                    end
+                    utility:Connection(object.DescendantAdded, function(d)
+                        consider_live_trinket(d)
+                    end)
                 end
             end)
+
+            if is_ptde then
+                local dinkets = ws:FindFirstChild("Dinkets")
+                if dinkets then
+                    for _, d in ipairs(dinkets:GetDescendants()) do
+                        consider_live_trinket(d)
+                    end
+                    utility:Connection(dinkets.DescendantAdded, function(d)
+                        consider_live_trinket(d)
+                    end)
+                end
+            end
 
             utility:Connection(ws.ChildRemoved, function(object)
                 if cheat_client.trinket_esp_objects and cheat_client.trinket_esp_objects[object] then
