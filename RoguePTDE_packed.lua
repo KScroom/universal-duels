@@ -26,13 +26,14 @@ repeat task.wait() until Players.LocalPlayer.Backpack
 local StarterGui = Services.StarterGui
 do
     local _t0 = os.clock()
-    while not StarterGui:FindFirstChild("LeaderboardGui") and os.clock() - _t0 < 20 do
-        task.wait(0.25)
+    while not StarterGui:FindFirstChild("LeaderboardGui") and os.clock() - _t0 < 3 do
+        task.wait(0.2)
     end
     if not StarterGui:FindFirstChild("LeaderboardGui") then
         warn("[PTDE] LeaderboardGui missing — continuing anyway")
     end
 end
+print("[PTDE] boot start PlaceId=" .. tostring(game.PlaceId))
 
 pcall(function()
     if getconnections then
@@ -96,11 +97,25 @@ local Required = {
     "checkcaller"
 }
 
+local function has_api(name)
+	local g = getgenv and getgenv() or _G
+	if g[name] ~= nil then
+		return true
+	end
+	if _G[name] ~= nil then
+		return true
+	end
+	local ok, val = pcall(function()
+		return getfenv()[name]
+	end)
+	return ok and val ~= nil
+end
 local Kick = clonefunction and clonefunction(Services.Players.LocalPlayer.Kick) or Services.Players.LocalPlayer.Kick
 for i = 1, #Required do
 	local v = Required[i]
-	if not getgenv()[v] then
-        Kick(Services.Players.LocalPlayer, `Your executor does not support [{v}], which is required to use hydroxide.sol @ Rogue Lineage.`)
+	if not has_api(v) then
+		warn("[PTDE] Missing API:", v, "- continuing (may break some features)")
+		-- do not Kick — copies / some executors expose APIs outside getgenv
 	end
 end
 
@@ -157,8 +172,9 @@ end
 if getgenv().SM2_ROGUE_FORCE_PLACEID then
     ALLOWED_PLACE_IDS[tonumber(getgenv().SM2_ROGUE_FORCE_PLACEID) or 0] = true
 end
-ALLOWED_PLACE_IDS[game.PlaceId] = ALLOWED_PLACE_IDS[game.PlaceId] or looks_like_rogue() or (getgenv().SM2_ROGUE_ALLOW_ANY == true)
-print("[PTDE] PlaceId=" .. tostring(game.PlaceId) .. " allowed=" .. tostring(ALLOWED_PLACE_IDS[game.PlaceId] == true))
+-- Always allow current place for PTDE / forks (structure check is best-effort only)
+ALLOWED_PLACE_IDS[game.PlaceId] = true
+print("[PTDE] PlaceId=" .. tostring(game.PlaceId) .. " allowed=true looks_like_rogue=" .. tostring(looks_like_rogue()))
 if ALLOWED_PLACE_IDS[game.PlaceId] then
     if getgenv()[key] and type(getgenv()[key]) == "table" then return end
     getgenv()[key] = setmetatable({}, { __tostring = function() return "nil" end })
@@ -3225,30 +3241,55 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
         end
     end
     
-    local repo = "https://raw.githubusercontent.com/heisenburgah/HYDROXIDE/refs/heads/main/"
+    -- Hydroxide's original DEPENDENCIES repo is dead (404). Use vendored Obsidian on our GitHub.
+    local repo = "https://raw.githubusercontent.com/KScroom/universal-duels/master/"
+    local function http_get(path)
+        local url = repo .. path .. "?v=ptde2"
+        local req = http_request or request or (syn and syn.request)
+        if req then
+            local ok, res = pcall(req, { Url = url, Method = "GET" })
+            if ok and type(res) == "table" then
+                local body = res.Body or res.body
+                if type(body) == "string" and #body > 100 then
+                    return body
+                end
+            end
+        end
+        return game:HttpGet(url, true)
+    end
     local success, library_func = pcall(function()
-        return loadstring(game:HttpGet(repo .. "DEPENDENCIES/Library.lua", true))()
+        local src = http_get("RogueLib_packed.lua")
+        print("[PTDE] UI lib bytes=", #tostring(src))
+        return loadstring(src)()
     end)
 
-    if success then
-        library = library_func(shared, utility)
+    if success and library_func then
+        if type(library_func) == "function" then
+            library = library_func(shared, utility)
+        else
+            library = library_func
+        end
         shared.library = library
 
         getgenv().Toggles = library.Toggles or {}
         getgenv().Options = library.Options or {}
         getgenv().Labels = library.Labels or {}
 
-        local SaveManager = loadstring(game:HttpGet(repo .. "DEPENDENCIES/SaveManager.lua"))()
-        local ThemeManager = loadstring(game:HttpGet(repo .. "DEPENDENCIES/ThemeManager.lua"))()
+        local SaveManager = loadstring(http_get("RogueSave_packed.lua"))()
+        local ThemeManager = loadstring(http_get("RogueTheme_packed.lua"))()
 
         SaveManager:SetLibrary(library)
         ThemeManager:SetLibrary(library)
-        SaveManager:IgnoreThemeSettings()
+        pcall(function()
+            SaveManager:IgnoreThemeSettings()
+        end)
 
         shared.SaveManager = SaveManager
         shared.ThemeManager = ThemeManager
+        print("[PTDE] UI library loaded")
     else
-        print("Failed to load UI library: " .. tostring(library_func))
+        warn("[PTDE] Failed to load UI library: " .. tostring(library_func))
+        error("[PTDE] UI library failed — check HTTP / allowHttp", 0)
     end
 
     
@@ -7448,14 +7489,15 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
         local Toggles = library.Toggles
 
         local window = library:CreateWindow({
-            Title = HXD_UserNote and string.format("Hydroxide | %s", HXD_UserNote:sub(1,1):upper() .. HXD_UserNote:sub(2)) or "Hydroxide",
+            Title = HXD_UserNote and string.format("Hydroxide | %s", HXD_UserNote:sub(1,1):upper() .. HXD_UserNote:sub(2)) or "Hydroxide | PTDE",
             NotifySide = "Left",
-            Footer = "",
+            Footer = "RightShift — toggle menu",
             Center = true,
-            AutoShow = false,
+            AutoShow = true,
             Resizable = true,
             DisableSearch = false
         })
+        print("[PTDE] Menu created — press RightShift to toggle")
 
         local Tabs = {
             Combat = window:AddTab("Combat", "sword"),
