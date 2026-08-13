@@ -8888,6 +8888,150 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
             })
         end
 
+        -- PTDE: install flight/noclip IMMEDIATELY (later script sections often error before the old late bind)
+        do
+            cheat_client.feature_connections = cheat_client.feature_connections or {}
+            local ptde_flight_noclip_was = false
+
+            local function ptde_key_down(keyName)
+                local code = Enum.KeyCode[keyName]
+                if not code then return false end
+                local ok, down = pcall(function()
+                    return uis:IsKeyDown(code)
+                end)
+                return ok and down or false
+            end
+
+            local function start_flight_rendering()
+                if cheat_client.feature_connections.flight then return end
+
+                local function flightStep(dt)
+                    dt = typeof(dt) == "number" and dt or (1 / 60)
+                    if dt > 0.1 then dt = 0.1 end
+
+                    local isFlightEnabled = Toggles and Toggles.flight and Toggles.flight.Value
+                    local isNoclipEnabled = Toggles and Toggles.noclip and Toggles.noclip.Value
+                    local isAutoFallEnabled = Toggles and Toggles.auto_fall and Toggles.auto_fall.Value
+                    if not isFlightEnabled and not isNoclipEnabled then return end
+
+                    local character = plr.Character
+                    if not character then return end
+                    local rootPart = FindFirstChild(character, "HumanoidRootPart")
+                    if not rootPart then return end
+                    local huma = FindFirstChildOfClass(character, "Humanoid")
+                    local cam = workspace.CurrentCamera
+                    if not cam then return end
+
+                    if isNoclipEnabled then
+                        for _, v in ipairs(character:GetDescendants()) do
+                            if v:IsA("BasePart") then
+                                v.CanCollide = false
+                            end
+                        end
+                        ptde_flight_noclip_was = true
+                        was_noclip_enabled = true
+                    elseif ptde_flight_noclip_was then
+                        for _, part in ipairs(character:GetDescendants()) do
+                            if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
+                                if part.Name == "Head" or part.Name == "Torso" or part.Name == "UpperTorso" or part.Name == "LowerTorso" then
+                                    part.CanCollide = true
+                                else
+                                    part.CanCollide = false
+                                end
+                            end
+                        end
+                        ptde_flight_noclip_was = false
+                        was_noclip_enabled = false
+                    end
+
+                    if not isFlightEnabled then
+                        if rootPart.Anchored then rootPart.Anchored = false end
+                        return
+                    end
+
+                    local move = Vector3.new()
+                    local look = cam.CFrame.LookVector
+                    local right = cam.CFrame.RightVector
+                    local flatLook = Vector3.new(look.X, 0, look.Z)
+                    if flatLook.Magnitude > 0.01 then flatLook = flatLook.Unit else flatLook = Vector3.new(0, 0, -1) end
+                    local flatRight = Vector3.new(right.X, 0, right.Z)
+                    if flatRight.Magnitude > 0.01 then flatRight = flatRight.Unit else flatRight = Vector3.new(1, 0, 0) end
+
+                    if ptde_key_down("W") then move += flatLook end
+                    if ptde_key_down("S") then move -= flatLook end
+                    if ptde_key_down("D") then move += flatRight end
+                    if ptde_key_down("A") then move -= flatRight end
+                    if ptde_key_down("Space") then move += Vector3.new(0, 1, 0) end
+                    if ptde_key_down("LeftShift") then move -= Vector3.new(0, 1, 0) end
+                    if isAutoFallEnabled and huma and huma.FloorMaterial == Enum.Material.Air and not ptde_key_down("Space") then
+                        move -= Vector3.new(0, 1, 0)
+                    end
+
+                    local speed = (Options and Options.flight_speed and Options.flight_speed.Value) or 100
+                    rootPart.Anchored = false
+                    if huma then
+                        pcall(function()
+                            huma.PlatformStand = false
+                            huma:ChangeState(Enum.HumanoidStateType.Flying)
+                        end)
+                    end
+
+                    if move.Magnitude > 0.01 then
+                        rootPart.CFrame = rootPart.CFrame + (move.Unit * speed * dt)
+                        rootPart.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+                        rootPart.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
+                    else
+                        rootPart.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+                        rootPart.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
+                    end
+                end
+
+                cheat_client.feature_connections.flight = rs.Heartbeat:Connect(flightStep)
+                cheat_client.feature_connections.flight_stepped = rs.Stepped:Connect(function()
+                    if not (Toggles and Toggles.noclip and Toggles.noclip.Value) then return end
+                    local character = plr.Character
+                    if not character then return end
+                    for _, v in ipairs(character:GetDescendants()) do
+                        if v:IsA("BasePart") then
+                            v.CanCollide = false
+                        end
+                    end
+                end)
+
+                pcall(function()
+                    if library then library:Notify("Flight/Noclip ready", 2) end
+                end)
+                print("[PTDE] flight/noclip handlers bound early")
+            end
+
+            local function stop_flight_rendering()
+                local flightOn = Toggles and Toggles.flight and Toggles.flight.Value
+                local noclipOn = Toggles and Toggles.noclip and Toggles.noclip.Value
+                if flightOn or noclipOn then
+                    return
+                end
+
+                if plr.Character then
+                    local rootPart = FindFirstChild(plr.Character, "HumanoidRootPart")
+                    if rootPart and rootPart.Anchored then
+                        rootPart.Anchored = false
+                    end
+                end
+
+                if cheat_client.feature_connections.flight then
+                    pcall(function() cheat_client.feature_connections.flight:Disconnect() end)
+                    cheat_client.feature_connections.flight = nil
+                end
+                if cheat_client.feature_connections.flight_stepped then
+                    pcall(function() cheat_client.feature_connections.flight_stepped:Disconnect() end)
+                    cheat_client.feature_connections.flight_stepped = nil
+                end
+            end
+
+            cheat_client.start_flight_rendering = start_flight_rendering
+            cheat_client.stop_flight_rendering = stop_flight_rendering
+        end
+
         do
             local group_flight = Tabs.Movement:AddLeftGroupbox("Flight")
 
@@ -8904,18 +9048,8 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
                     if value then
                         if cheat_client.start_flight_rendering then
                             cheat_client.start_flight_rendering()
-                        else
-                            task.defer(function()
-                                local t0 = os.clock()
-                                while not cheat_client.start_flight_rendering and os.clock() - t0 < 8 do
-                                    task.wait(0.1)
-                                end
-                                if cheat_client.start_flight_rendering and Toggles.flight and Toggles.flight.Value then
-                                    cheat_client.start_flight_rendering()
-                                elseif library then
-                                    library:Notify("Flight failed to start — reload script", 4)
-                                end
-                            end)
+                        elseif library then
+                            library:Notify("Flight handler missing", 4)
                         end
                     else
                         if cheat_client.stop_flight_rendering then
@@ -8943,16 +9077,6 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
                     if value then
                         if cheat_client.start_flight_rendering then
                             cheat_client.start_flight_rendering()
-                        else
-                            task.defer(function()
-                                local t0 = os.clock()
-                                while not cheat_client.start_flight_rendering and os.clock() - t0 < 8 do
-                                    task.wait(0.1)
-                                end
-                                if cheat_client.start_flight_rendering and Toggles.noclip and Toggles.noclip.Value then
-                                    cheat_client.start_flight_rendering()
-                                end
-                            end)
                         end
                     elseif not (Toggles and Toggles.flight and Toggles.flight.Value) then
                         if cheat_client.stop_flight_rendering then
@@ -22171,6 +22295,8 @@ if (is_gaia or is_khei) then
                 end
             end
             
+            -- Late flight bind skipped when early PTDE handlers already installed
+            if not cheat_client.start_flight_rendering then
             local function start_flight_rendering()
                 if cheat_client.feature_connections.flight then return end
 
@@ -22317,6 +22443,7 @@ if (is_gaia or is_khei) then
                     start_flight_rendering()
                 end
             end)
+            end -- early flight already bound
         end
 
         do
