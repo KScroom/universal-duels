@@ -398,6 +398,7 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
 
     local is_gaia = game.PlaceId == 5208655184 or game.PlaceId == 109732117428502;
     local is_khei = game.PlaceId == 3541987450 or game.PlaceId == 14341521240;
+    local is_rlp = game.PlaceId == 14341521240;
     -- Unknown RL copies: prefer Gaia behavior unless Khei markers / force flag
     if game.PlaceId ~= 5208655184 and game.PlaceId ~= 3541987450 and game.PlaceId ~= 109732117428502 and game.PlaceId ~= 14341521240 then
         local force = tostring(getgenv().SM2_ROGUE_MAP or ""):lower()
@@ -414,7 +415,8 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
                 is_gaia, is_khei = true, false
             end
         end
-        print("[PTDE] map mode is_gaia=" .. tostring(is_gaia) .. " is_khei=" .. tostring(is_khei))
+        print("[PTDE] map mode is_gaia=" .. tostring(is_gaia) .. " is_khei=" .. tostring(is_khei) .. " is_rlp=" .. tostring(is_rlp))
+        print("[PTDE] feature gates use is_gaia/is_khei")
     end
 
     local updatePlayerLabel, getPlayerColor
@@ -2186,12 +2188,12 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
                         end
                     end)
                 end)
-                if game.PlaceId == 5208655184 then
+                if is_gaia then
                     container = FindFirstChild(ws, "Map")
-                elseif game.PlaceId == 3541987450 then
+                elseif is_khei then
                     container = ws
                 end
-                if game.PlaceId == 5208655184 or game.PlaceId == 14341521240 then
+                if (is_gaia or is_khei) then
                     txt.ChatWindowConfiguration.Enabled = false
                 end
                 if container and cheat_client then
@@ -2227,7 +2229,7 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
                     if (jack_char and jack_char:IsA("Tool")) or (jack_bag and jack_bag:IsA("Tool")) then
                         v:SetAttribute("Hidden", true)
 
-                        if game.PlaceId == 3541987450 then
+                        if is_khei then
                             local leaderstats = FindFirstChild(v, "leaderstats")
                             if leaderstats then
                                 local hidden = FindFirstChild(leaderstats, "Hidden")
@@ -2238,7 +2240,7 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
                         end
                     end
                 end
-                if game.PlaceId ~= 14341521240 then
+                if not is_rlp then
                     plr.CameraMaxZoomDistance = 50
                     plr.DevCameraOcclusionMode = Enum.DevCameraOcclusionMode.Zoom
                 end
@@ -3363,7 +3365,7 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
             end
 
             function cheat_client:get_name(player)
-                if game.PlaceId == 5208655184 or game.PlaceId == 109732117428502 then
+                if is_gaia then
                     if not player:GetAttribute("FirstName") or player:GetAttribute("FirstName") == "" then
                         return "nil"
                     end
@@ -3382,7 +3384,7 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
                     else
                         return fullName
                     end
-                elseif game.PlaceId == 3541987450 or game.PlaceId == 14341521240 then
+                elseif is_khei then
                     local leaderstats = FindFirstChild(player, "leaderstats")
                     if not leaderstats or not FindFirstChild(leaderstats, "FirstName") then
                         return "nil"
@@ -3417,7 +3419,7 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
             local auto_housemate_ally = Toggles and Toggles.auto_housemate_ally and Toggles.auto_housemate_ally.Value or false
             local auto_friend_ally = Toggles and Toggles.auto_friend_ally and Toggles.auto_friend_ally.Value or false
 
-            if game.PlaceId == 5208655184 then
+            if is_gaia then
                 local lastName1 = player:GetAttribute("LastName")
                 local lastName2 = plr:GetAttribute("LastName")
 
@@ -3429,7 +3431,7 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
                        (auto_friend_ally and is_friend) or
                        is_manual_friend
 
-            elseif game.PlaceId == 3541987450 or game.PlaceId == 14341521240 then
+            elseif is_khei then
                 local stats1 = FindFirstChild(player, "leaderstats")
                 local stats2 = FindFirstChild(plr, "leaderstats")
 
@@ -3510,7 +3512,7 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
 
                 local success, isInGroup, success2, isInGroup2
 
-                if game.PlaceId == 14341521240 then
+                if is_rlp then
                     local success_mod, isInGroupMod = pcall(function()
                         return player:IsInGroup(15055389)
                     end)
@@ -4924,7 +4926,7 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
 
                         
                     elseif (FindFirstChild(v, 'Attachment') and FindFirstChildOfClass(v.Attachment, 'ParticleEmitter') and FindFirstChildOfClass(v.Attachment, 'ParticleEmitter').Rate == 5 and tostring(FindFirstChildOfClass(v.Attachment, 'ParticleEmitter').Color):split(" ")[3] ~= "0.8") then
-                        local name = (game.PlaceId == 3541987450) and 'Phoenix Flower' or 'Azael Horn'
+                        local name = (is_khei) and 'Phoenix Flower' or 'Azael Horn'
                         return name, cheat_client.trinket_colors.mythic.Color, cheat_client.trinket_colors.mythic.ZIndex
                     
                     elseif (FindFirstChild(v, 'Attachment') and FindFirstChildOfClass(v.Attachment, 'ParticleEmitter') and FindFirstChildOfClass(v.Attachment, 'ParticleEmitter').Rate == 5 and tostring(FindFirstChildOfClass(v.Attachment, 'ParticleEmitter').Color):split(" ")[3]=="0.8") then
@@ -4937,7 +4939,7 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
                         return 'Ice Essence', cheat_client.trinket_colors.rare.Color, cheat_client.trinket_colors.rare.ZIndex
                     end
 
-                    if game.PlaceId == 3541987450 then
+                    if is_khei then
                         if (v.ClassName == "MeshPart" and v.MeshId == "rbxassetid://4027112893" and FindFirstChild(v, "Part")) then
                             return 'Bound Book', cheat_client.trinket_colors.rare.Color, cheat_client.trinket_colors.rare.ZIndex
                         elseif (v.ClassName == "MeshPart" and v.MeshId == "rbxassetid://%202877143560%20" and v.Color.B < v.Color.G and v.Color.B > v.Color.R) then
@@ -5115,7 +5117,7 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
             end
             
             do
-                if game.PlaceId == 5208655184 or game.PlaceId == 109732117428502 then
+                if is_gaia then
                     cheat_client.fallion_esp_objects = cheat_client.fallion_esp_objects or {}
                     
                     function cheat_client:add_fallion_esp(npc, name)
@@ -5266,7 +5268,7 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
             end
     
             do
-                if game.PlaceId ~= 3541987450 then
+                if not is_khei then
                     cheat_client.ingredient_esp_objects = cheat_client.ingredient_esp_objects or {}
 
                     function cheat_client:identify_ingredient(object)
@@ -6231,7 +6233,7 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
                 local firstName = splitString[1] or ""
                 local lastName = splitString[2] or ""
 
-                if game.PlaceId == 5208655184 or game.PlaceId == 109732117428502 then
+                if is_gaia then
                     plr:SetAttribute("FirstName", firstName)
                     plr:SetAttribute("LastName", lastName)
 
@@ -8216,7 +8218,7 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
                             end
                             cheat_client.fallion_esp_objects = {}
                         else
-                            if game.PlaceId == 5208655184 or game.PlaceId == 109732117428502 then
+                            if is_gaia then
                                 for _, fallion in next, ws.NPCs:GetChildren() do
                                     if fallion.Name == "Fallion" then
                                         cheat_client:add_fallion_esp(fallion, fallion.Name)
@@ -8307,7 +8309,7 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
             end
 
             do
-                if game.PlaceId ~= 14341521240 then
+                if not is_rlp then
                     group_ore_esp:AddToggle("ore_esp", {
                     Text = "Ore ESP",
                     Default = cheat_client.config.ore_esp,
@@ -8466,7 +8468,7 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
                 })
             end
 
-            if game.PlaceId ~= 3541987450 then
+            if not is_khei then
                 local selected_inn = "Southern Sanctuary"
                 local inn_locations = {
                     "Southern Sanctuary",
@@ -8766,7 +8768,7 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
 
             group_flight:AddDivider()
 
-            if game.PlaceId ~= 14341521240 then
+            if not is_rlp then
                 group_flight:AddToggle("better_flight", {
                 Text = "Better Flight",
                 Tooltip = "good for looting",
@@ -9344,9 +9346,9 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
                 end
 
                 local container
-                if game.PlaceId == 5208655184 then
+                if is_gaia then
                     container = FindFirstChild(ws, "Map")
-                elseif game.PlaceId == 3541987450 then
+                elseif is_khei then
                     container = ws
                 end
 
@@ -9997,7 +9999,7 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
                                     v:SetAttribute("Hidden", false)
                                 end
 
-                                if game.PlaceId == 3541987450 then
+                                if is_khei then
                                     local leaderstats = FindFirstChild(v, "leaderstats")
                                     if leaderstats then
                                         local hidden = FindFirstChild(leaderstats, "Hidden")
@@ -10018,7 +10020,7 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
                                     end
                                 end)
 
-                                if game.PlaceId == 3541987450 then
+                                if is_khei then
                                     local leaderstats = FindFirstChild(v, "leaderstats")
                                     if leaderstats then
                                         local hidden = FindFirstChild(leaderstats, "Hidden")
@@ -10063,7 +10065,7 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
                                 if (jack_char and jack_char:IsA("Tool")) or (jack_bag and jack_bag:IsA("Tool")) then
                                     v:SetAttribute("Hidden", true)
 
-                                    if game.PlaceId == 3541987450 then
+                                    if is_khei then
                                         local leaderstats = FindFirstChild(v, "leaderstats")
                                         if leaderstats then
                                             local hidden = FindFirstChild(leaderstats, "Hidden")
@@ -10121,7 +10123,7 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
 
             group_timers:AddDivider()
 
-            if game.PlaceId == 5208655184 then
+            if is_gaia then
                 group_timers:AddLabel("CrLastLooted", {
                     Text = "Castle Rock: " .. math.floor((os.time() - workspace:WaitForChild("MonsterSpawns"):WaitForChild("Triggers"):WaitForChild("CastleRockSnake"):WaitForChild("LastSpawned").Value) / 60) .. "m",
                     DoesWrap = false
@@ -10141,7 +10143,7 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
                     Text = "Crypt of Kings: " .. math.floor((os.time() - workspace:WaitForChild("MonsterSpawns"):WaitForChild("Triggers"):WaitForChild("CryptTrigger"):WaitForChild("LastSpawned").Value) / 60) .. "m",
                     DoesWrap = false
                 })
-            elseif game.PlaceId == 3541987450 then
+            elseif is_khei then
                 group_timers:AddLabel("blank2", {
                     Text = " ",
                     DoesWrap = false
@@ -14609,9 +14611,9 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
                 end)))
 
                 local container
-                if game.PlaceId == 5208655184 then
+                if is_gaia then
                     container = FindFirstChild(ws, "Map")
-                elseif game.PlaceId == 3541987450 then
+                elseif is_khei then
                     container = ws
                 end
 
@@ -18148,7 +18150,7 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
                 Tooltip = "Wait time before respawning and restarting path (in minutes)"
             })
 
-            if game.PlaceId == 3541987450 or game.PlaceId == 5208655184 then
+            if (is_gaia or is_khei) then
                 local lives_table = {
                     ["Azael"] = 2,
                     ["Kasparan"] = 4,
@@ -20709,7 +20711,7 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
 
         local group_keybinds = Tabs.Interface:AddRightGroupbox("Keybind Settings")
 
-        if game.PlaceId == 3541987450 and not LPH_OBFUSCATED then
+        if is_khei and not LPH_OBFUSCATED then
             group_keybinds:AddLabel("PS Heal Keybind"):AddKeyPicker("PsHealButtonKeybind", {
                 Default = cheat_client.config.ps_heal_button_keybind,
                 Text = "PS Heal Button",
@@ -20741,7 +20743,7 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
 
         do
             if shared.SaveManager and shared.ThemeManager then
-                local config_folder = game.PlaceId == 14341521240 and "HYDROXIDE/rlp_configs" or "HYDROXIDE/configs"
+                local config_folder = is_rlp and "HYDROXIDE/rlp_configs" or "HYDROXIDE/configs"
                 shared.SaveManager:SetFolder(config_folder)
                 shared.ThemeManager:SetFolder("HYDROXIDE")
 
@@ -20934,7 +20936,7 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
                     end
 
                     if Toggles.FallionEsp and Toggles.FallionEsp.Value then
-                        if game.PlaceId == 5208655184 or game.PlaceId == 109732117428502 then
+                        if is_gaia then
                             if FindFirstChild(ws, "NPCs") then
                                 cheat_client.fallion_esp_objects = cheat_client.fallion_esp_objects or {}
                                 for _, fallion in next, ws.NPCs:GetChildren() do
@@ -21328,7 +21330,7 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
                 return false
             end
 
-            if game.PlaceId == 14341521240 then
+            if is_rlp then
                 local dialogue = FindFirstChild(rps.Requests, "Dialogue")
                 if dialogue then
                     dialogue_remote = dialogue
@@ -21657,7 +21659,7 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
                 end
             end
 
-            if game.PlaceId == 5208655184 or game.PlaceId == 3541987450 or game.PlaceId == 109732117428502 or game.PlaceId == 14341521240 then
+            if (is_gaia or is_khei) then
                 old_remote = hookfunction(Instance.new("RemoteEvent").FireServer, function(Event, ...)
                 	local args = {...}
 
@@ -21667,11 +21669,11 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
                         and FindFirstChild(char.CharacterHandler, "Remotes")
 
                     if shared and not mana_remote and remotes_folder and Event.Parent == remotes_folder then
-                        if game.PlaceId == 14341521240 then
+                        if is_rlp then
                             if Event.Name == "SetManaChargeState" then
                                 mana_remote = Event
                             end
-                        elseif game.PlaceId == 3541987450 then
+                        elseif is_khei then
                             if Event.Name:match("^%x%x%x%x%x%x%x%x%-%x%x%x%x%-%x%x%x%x%-%x%x%x%x%-%x%x%x%x%x%x%x%x%x%x%x%x$") and #args == 1 and typeof(args[1]) == "boolean" then
                                 mana_remote = Event
                             end
@@ -22150,7 +22152,7 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
             end
 
             do
-                if game.PlaceId ~= 3541987450 then
+                if not is_khei then
                     for index, instance in next, ws:GetChildren() do
                         if ingredient_folder then 
                             break
@@ -22176,7 +22178,7 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
             end
     
             do
-                if game.PlaceId ~= 14341521240 then
+                if not is_rlp then
                     for _,object in next, ws.Ores:GetChildren() do
                         cheat_client:add_ore_esp(object)
                     end
@@ -22203,7 +22205,7 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
         end
     
         do
-            if game.PlaceId ~= 14341521240 then
+            if not is_rlp then
                 local artifact_player_connections = {}
                 local lastNotify = {}
                 local DEBOUNCE_TIME = 1.26
@@ -22360,7 +22362,7 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
         end
     
         do
-            if game.PlaceId ~= 3541987450 then
+            if not is_khei then
                 if ingredient_folder then
                     utility:Connection(ingredient_folder.ChildAdded, function(object)
                         local ingredient_name = cheat_client:identify_ingredient(object)
@@ -22380,7 +22382,7 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
         end
     
         do
-            if game.PlaceId ~= 14341521240 then
+            if not is_rlp then
                 utility:Connection(ws.Ores.ChildAdded, function(object)
                     cheat_client:add_ore_esp(object)
                 end)
@@ -22462,7 +22464,7 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
                             statGui = FindFirstChild(plr.PlayerGui, "StatGui")
                         until statGui and FindFirstChild(statGui, "Container") and FindFirstChild(statGui.Container, "CharacterName")
                         repeat task.wait(0.05) until FindFirstChild(statGui.Container.CharacterName, "Shadow")
-                        if game.PlaceId ~= 14341521240 then
+                        if not is_rlp then
                             repeat task.wait(0.025) until plr.Character and FindFirstChild(plr.Character, "FakeHumanoid",true)
                         end
                         task.wait(0.025)
@@ -22512,7 +22514,7 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
         end
 
         do
-            if game.PlaceId == 5208655184 then
+            if is_gaia then
                 local function createSearchBar()
                     if shared and shared.is_unloading then return end
 
@@ -22922,7 +22924,7 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
                     end)
                 end
 
-                if game.PlaceId == 5208655184 then
+                if is_gaia then
                     player_monitor_connections[player].maxEdictAttr = utility:Connection(player:GetAttributeChangedSignal("MaxEdict"), function()
                         updatePlayerLabels(player)
                     end)
@@ -23732,7 +23734,7 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
                     ClickMenuClass.Text = classText
                 end)
 
-                if game.PlaceId == 3541987450 then
+                if is_khei then
                     pcall(function()
                         if player.Character then
                             local blessings_folder = FindFirstChild(player.Character, "Blessings")
@@ -24612,7 +24614,7 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
         end
 
         do
-            if game.PlaceId == 5208655184 then
+            if is_gaia then
                 local function last_looted(where)
                     if where == "cr" then
                         return math.floor((os.time() - WaitForChild(workspace, "MonsterSpawns"):WaitForChild("Triggers"):WaitForChild("CastleRockSnake"):WaitForChild("LastSpawned").Value) / 60).."m"
@@ -24644,7 +24646,7 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
                         end
                     end
                 end))
-            elseif game.PlaceId == 3541987450 then
+            elseif is_khei then
                 local time_elapsed_blessings = 0
                 utility:Connection(rs.Heartbeat, LPH_NO_VIRTUALIZE(function(delta_time)
                     time_elapsed_blessings += delta_time
@@ -25191,7 +25193,7 @@ end
                             end
 
                             local function get_last_looted(where)
-                                if game.PlaceId ~= 5208655184 then return "N/A" end
+                                if not is_gaia then return "N/A" end
                                 local success, result = pcall(function()
                                     if where == "cr" then
                                         return math.floor((os.time() - workspace.MonsterSpawns.Triggers.CastleRockSnake.LastSpawned.Value) / 60) .. "m"
@@ -25416,7 +25418,7 @@ end
         end
 
         do
-            if game.PlaceId ~= 3541987450 then
+            if not is_khei then
                 if ingredient_folder then
                     local ingredients = {}
                     local last_check_time = 0
@@ -26558,7 +26560,7 @@ end
                         cheat_client.aimbot.current_target = nearest_player
                     end
 
-                    if game.PlaceId ~= 14341521240 and get_mouse_remote then
+                    if not is_rlp and get_mouse_remote then
                         get_mouse_remote.OnClientInvoke = function()
                             if not is_valid_tool_equipped() then
                                 return {
