@@ -723,7 +723,7 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
 
             temperature_lock = false,
             textures = false,
-            no_fall = false,
+            no_fall = (is_ptde and true) or false,
             no_killbrick = false,
             no_mob_trigger = false,
             freecam = false,
@@ -928,8 +928,23 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
             mythic = {ZIndex = 6,Color = Color3.fromRGB(255, 0, 80)},
         },
         custom_flight_functions = {
-            ["IsKeyDown"] = uis.IsKeyDown,
-            ["GetFocusedTextBox"] = uis.GetFocusedTextBox,
+            ["IsKeyDown"] = function(inputService, key)
+                local code = key
+                if typeof(key) == "string" then
+                    code = Enum.KeyCode[key]
+                end
+                if not code then return false end
+                local ok, down = pcall(function()
+                    return inputService:IsKeyDown(code)
+                end)
+                return ok and down or false
+            end,
+            ["GetFocusedTextBox"] = function(inputService)
+                local ok, box = pcall(function()
+                    return inputService:GetFocusedTextBox()
+                end)
+                return ok and box or nil
+            end,
         },
         ingredient_identifiers = {
             ["3293218896"] = "Desert Mist",
@@ -8979,7 +8994,7 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
                     Mode = "Toggle",
                     Callback = function(Value)
                         local blatant_mode_enabled = Toggles.blatant_mode and Toggles.blatant_mode.Value
-                        if blatant_mode_enabled and Toggles.better_flight then
+                        if (is_ptde or blatant_mode_enabled) and Toggles.better_flight then
                             Toggles.better_flight:SetValue(not Toggles.better_flight.Value)
                         end
                     end
@@ -9013,7 +9028,7 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
                 Compact = false,
                 Callback = function(value)
                     local blatant_mode_enabled = Toggles.blatant_mode and Toggles.blatant_mode.Value
-                    if not blatant_mode_enabled and value > 20 then
+                    if not is_ptde and not blatant_mode_enabled and value > 20 then
                         Options.speed_boost_value:SetValue(20)
                         local now = tick()
                         if now - last_speed_notif > 2 then
@@ -21906,7 +21921,7 @@ if (is_gaia or is_khei) then
                             if Event.Name == "ApplyFallDamage" then
                                 return
                             end
-                            if #args == 2 and typeof(args[2]) == "table" then
+                            if not uses_named_combat_remotes and #args == 2 and typeof(args[2]) == "table" then
                                 return
                             end
                         end
@@ -22107,141 +22122,121 @@ if (is_gaia or is_khei) then
                 if cheat_client.feature_connections.flight then return end
 
                 cheat_client.feature_connections.flight = utility:Connection(rs.RenderStepped, LPH_NO_VIRTUALIZE(function()
+                    local isFlightEnabled = Toggles and Toggles.flight and Toggles.flight.Value or false
                     local isNoclipEnabled = Toggles and Toggles.noclip and Toggles.noclip.Value or false
                     local isAutoFallEnabled = Toggles and Toggles.auto_fall and Toggles.auto_fall.Value or false
 
                     local character = plr.Character
-                    if character then
-                        local rootPart = FindFirstChild(character, "HumanoidRootPart")
-                        if rootPart then
-                            local camCFrame = workspace.CurrentCamera.CFrame
-                            local huma = FindFirstChildOfClass(character, "Humanoid")
-                            
-                            if true then
-                                if isNoclipEnabled then
-                                    makeNearbyPartsTransparent(plr.Character, rootPart)
-                                    
-                                    for i,v in next, plr.Character:GetDescendants() do
-                                        if v:IsA("BasePart") then
-                                            v.CanCollide = false
-                                            
-                                            if v ~= rootPart then
-                                                v.RotVelocity = Vector3.new(0, 0, 0)
-                                            end
-                                        end
-                                    end
-                                    
-                                    if not was_noclip_enabled and huma then
-                                        huma:SetStateEnabled(5, false)
-                                        huma:ChangeState(3)
-                                    end
-                                    
-                                    if rootPart then
-                                        local lookVector = camCFrame.LookVector
-                                        local flatLook = Vector3.new(lookVector.X, 0, lookVector.Z).Unit
-                                        
-                                        if flatLook.Magnitude > 0.01 then
-                                            rootPart.CFrame = CFrame.new(rootPart.Position, rootPart.Position + flatLook)
-                                        end
-                                    end
-                                elseif was_noclip_enabled then
-                                    restorePartTransparency()
-                                    
-                                    for _, part in ipairs(plr.Character:GetDescendants()) do
-                                        if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
-                                            if part.Name == "Head" or part.Name == "Torso" then
-                                                part.CanCollide = true
-                                            else
-                                                part.CanCollide = false
-                                            end
-                                        end
-                                    end
-                                    
-                                    if huma then
-                                        huma:SetStateEnabled(5, true)
-                                        huma:ChangeState(5)
-                                    end
-                                end
-                                
-                                was_noclip_enabled = isNoclipEnabled
-                                
-                                if not cheat_client.custom_flight_functions["GetFocusedTextBox"](uis) then
-                                    local eVector = Vector3.new()
-                                    local rVector, lVector, uVector = camCFrame.RightVector, camCFrame.LookVector, camCFrame.UpVector
+                    if not character then return end
+                    local rootPart = FindFirstChild(character, "HumanoidRootPart")
+                    if not rootPart then return end
 
-                                    local flatLVector = Vector3.new(lVector.X, 0, lVector.Z)
-                                    if flatLVector.Magnitude > 0.01 then
-                                        flatLVector = flatLVector.Unit
-                                    else
-                                        flatLVector = Vector3.new(0, 0, 1)
-                                    end
-                                    local flatRVector = Vector3.new(rVector.X, 0, rVector.Z).Unit
+                    local camCFrame = workspace.CurrentCamera.CFrame
+                    local huma = FindFirstChildOfClass(character, "Humanoid")
 
-                                    if cheat_client.custom_flight_functions["IsKeyDown"](uis, "W") then eVector += flatLVector end
-                                    if cheat_client.custom_flight_functions["IsKeyDown"](uis, "S") then eVector -= flatLVector end
-                                    if cheat_client.custom_flight_functions["IsKeyDown"](uis, "D") then eVector += flatRVector end
-                                    if cheat_client.custom_flight_functions["IsKeyDown"](uis, "A") then eVector -= flatRVector end
-                                    
-                                    local isHoldingSpace = cheat_client.custom_flight_functions["IsKeyDown"](uis, "Space")
-                                    if isHoldingSpace then eVector += uVector end
-                                    if cheat_client.custom_flight_functions["IsKeyDown"](uis, "LeftShift") then eVector -= uVector end
-                                    
-                                    local isInAir = huma and huma.FloorMaterial == Enum.Material.Air
-                                    local isInWater = huma and (huma:GetState() == Enum.HumanoidStateType.Swimming or huma:GetState() == Enum.HumanoidStateType.PlatformStanding and huma.FloorMaterial == Enum.Material.Water)
-                                    if isAutoFallEnabled and isInAir and not isHoldingSpace and not isInWater then
-                                        eVector -= Vector3.new(0, 1, 0)
-                                    end
-
-                                    local isMovingDown = cheat_client.custom_flight_functions["IsKeyDown"](uis, "LeftShift") or (isAutoFallEnabled and isInAir and not isHoldingSpace and not isInWater)
-                                    if isNoclipEnabled and not isMovingDown and rootPart.AssemblyLinearVelocity.Y < 0 then
-                                        local currentVelocity = rootPart.AssemblyLinearVelocity
-                                        rootPart.AssemblyLinearVelocity = Vector3.new(currentVelocity.X, 0, currentVelocity.Z)
-                                    end
-                                    
-                                    if eVector.Unit.X == eVector.Unit.X then
-                                        local flightSpeed = (Options and Options.flight_speed and Options.flight_speed.Value) or 100
-                                        rootPart.AssemblyLinearVelocity = eVector.Unit * flightSpeed
-                                    else
-                                        local currentVel = rootPart.AssemblyLinearVelocity
-                                        rootPart.AssemblyLinearVelocity = currentVel * 0.85
-                                    end
-                                    
-                                    local shouldAnchor = eVector == Vector3.new() or rootPart.AssemblyLinearVelocity.Magnitude < 1
-                                    rootPart.Anchored = shouldAnchor
+                    if isNoclipEnabled then
+                        makeNearbyPartsTransparent(character, rootPart)
+                        for _, v in next, character:GetDescendants() do
+                            if v:IsA("BasePart") then
+                                v.CanCollide = false
+                                if v ~= rootPart then
+                                    v.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
                                 end
-                            elseif was_noclip_enabled then
-                                restorePartTransparency()
-                                
-                                for _, part in ipairs(plr.Character:GetDescendants()) do
-                                    if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
-                                        if part.Name == "Head" or part.Name == "Torso" then
-                                            part.CanCollide = true
-                                        else
-                                            part.CanCollide = false
-                                        end
-                                    end
-                                end
-                                
-                                if huma then
-                                    huma:SetStateEnabled(5, true)
-                                    huma:ChangeState(5)
-                                end
-
-                                was_noclip_enabled = false
                             end
+                        end
+                        if not was_noclip_enabled and huma then
+                            pcall(function()
+                                huma:SetStateEnabled(Enum.HumanoidStateType.FallingDown, false)
+                                huma:ChangeState(Enum.HumanoidStateType.Flying)
+                            end)
+                        end
+                    elseif was_noclip_enabled then
+                        restorePartTransparency()
+                        for _, part in ipairs(character:GetDescendants()) do
+                            if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
+                                if part.Name == "Head" or part.Name == "Torso" or part.Name == "UpperTorso" or part.Name == "LowerTorso" then
+                                    part.CanCollide = true
+                                else
+                                    part.CanCollide = false
+                                end
+                            end
+                        end
+                        if huma then
+                            pcall(function()
+                                huma:SetStateEnabled(Enum.HumanoidStateType.FallingDown, true)
+                                huma:ChangeState(Enum.HumanoidStateType.GettingUp)
+                            end)
+                        end
+                        if rootPart.Anchored and not isFlightEnabled then
+                            rootPart.Anchored = false
+                        end
+                    end
+                    was_noclip_enabled = isNoclipEnabled
+
+                    if isFlightEnabled and not cheat_client.custom_flight_functions["GetFocusedTextBox"](uis) then
+                        local eVector = Vector3.new()
+                        local rVector, lVector = camCFrame.RightVector, camCFrame.LookVector
+                        local flatLVector = Vector3.new(lVector.X, 0, lVector.Z)
+                        if flatLVector.Magnitude > 0.01 then flatLVector = flatLVector.Unit else flatLVector = Vector3.new(0, 0, 1) end
+                        local flatRVector = Vector3.new(rVector.X, 0, rVector.Z)
+                        if flatRVector.Magnitude > 0.01 then flatRVector = flatRVector.Unit else flatRVector = Vector3.new(1, 0, 0) end
+
+                        if cheat_client.custom_flight_functions["IsKeyDown"](uis, "W") then eVector += flatLVector end
+                        if cheat_client.custom_flight_functions["IsKeyDown"](uis, "S") then eVector -= flatLVector end
+                        if cheat_client.custom_flight_functions["IsKeyDown"](uis, "D") then eVector += flatRVector end
+                        if cheat_client.custom_flight_functions["IsKeyDown"](uis, "A") then eVector -= flatRVector end
+                        local isHoldingSpace = cheat_client.custom_flight_functions["IsKeyDown"](uis, "Space")
+                        if isHoldingSpace then eVector += Vector3.new(0, 1, 0) end
+                        if cheat_client.custom_flight_functions["IsKeyDown"](uis, "LeftShift") then eVector -= Vector3.new(0, 1, 0) end
+
+                        local isInAir = huma and huma.FloorMaterial == Enum.Material.Air
+                        if isAutoFallEnabled and isInAir and not isHoldingSpace then
+                            eVector -= Vector3.new(0, 1, 0)
+                        end
+
+                        if isNoclipEnabled and rootPart.AssemblyLinearVelocity.Y < 0 and not cheat_client.custom_flight_functions["IsKeyDown"](uis, "LeftShift") then
+                            local currentVelocity = rootPart.AssemblyLinearVelocity
+                            rootPart.AssemblyLinearVelocity = Vector3.new(currentVelocity.X, 0, currentVelocity.Z)
+                        end
+
+                        if eVector.Magnitude > 0.01 then
+                            local flightSpeed = (Options and Options.flight_speed and Options.flight_speed.Value) or 100
+                            rootPart.Anchored = false
+                            rootPart.AssemblyLinearVelocity = eVector.Unit * flightSpeed
+                        else
+                            rootPart.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+                            rootPart.Anchored = true
+                        end
+                    elseif not isFlightEnabled then
+                        if rootPart.Anchored then
+                            rootPart.Anchored = false
+                        end
+                        if isNoclipEnabled and rootPart.AssemblyLinearVelocity.Y < -1 then
+                            local v = rootPart.AssemblyLinearVelocity
+                            rootPart.AssemblyLinearVelocity = Vector3.new(v.X, 0, v.Z)
                         end
                     end
                 end), true)
             end
 
-            local function stop_flight_rendering()
+                        local function stop_flight_rendering()
+                -- Keep loop alive if the other toggle (flight/noclip) is still on
+                local flightOn = Toggles and Toggles.flight and Toggles.flight.Value
+                local noclipOn = Toggles and Toggles.noclip and Toggles.noclip.Value
+                if flightOn or noclipOn then
+                    return
+                end
+
                 if cheat_client.feature_connections.flight then
                     if was_noclip_enabled then
                         cheat_client:restore_state()
                     end
 
-                    if Toggles and Toggles.noclip and Toggles.noclip.Value then
-                        Toggles.noclip:SetValue(false)
+                    if plr.Character then
+                        local rootPart = FindFirstChild(plr.Character, "HumanoidRootPart")
+                        if rootPart and rootPart.Anchored then
+                            rootPart.Anchored = false
+                        end
                     end
 
                     cheat_client.feature_connections.flight:Disconnect()
@@ -22251,6 +22246,12 @@ if (is_gaia or is_khei) then
 
             cheat_client.start_flight_rendering = start_flight_rendering
             cheat_client.stop_flight_rendering = stop_flight_rendering
+
+            pcall(function()
+                if (Toggles.flight and Toggles.flight.Value) or (Toggles.noclip and Toggles.noclip.Value) then
+                    start_flight_rendering()
+                end
+            end)
         end
 
         do
@@ -23225,12 +23226,14 @@ if (is_gaia or is_khei) then
             end
 
             local processLeaderboardLabel = LPH_NO_VIRTUALIZE(function(label)
-                if not label:IsA("TextLabel") then return end
+                if not (label:IsA("TextLabel") or label:IsA("TextButton")) then return end
 
                 task.spawn(function()
-                    for _, connection in pairs(getconnections(label.MouseEnter)) do
+                    local matched = false
+                    pcall(function()
+                    for _, connection in pairs((getconnections and getconnections(label.MouseEnter)) or {}) do
                         if connection.Function then
-                            local upvalues = debug.getupvalues(connection.Function)
+                            local upvalues = (debug and debug.getupvalues and debug.getupvalues(connection.Function)) or {}
                             for index, value in pairs(upvalues) do
                                 local player = nil
 
@@ -23249,16 +23252,23 @@ if (is_gaia or is_khei) then
                             end
                         end
                     end
+                    end)
+                    if playerLabels[label] then return end
                     -- PTDE leaderboard text fallback
                     local text = tostring(label.Text or "")
                     for _, player in ipairs(plrs:GetPlayers()) do
                         local okName, display = pcall(function()
                             return cheat_client:get_name(player)
                         end)
-                        local first = okName and display and tostring(display):match("^([^,]+)") or ""
+                        local displayName = okName and display and tostring(display) or ""
+                        local first = displayName:match("^([^,]+)") or ""
                         first = first:gsub("%s+$", "")
+                        local stats = player:FindFirstChild("leaderstatsfake") or player:FindFirstChild("leaderstats")
+                        local firstStat = stats and stats:FindFirstChild("FirstName") and tostring(stats.FirstName.Value) or ""
                         if text == player.Name
+                            or text == player.DisplayName
                             or (first ~= "" and first ~= "nil" and string.find(text, first, 1, true))
+                            or (firstStat ~= "" and string.find(text, firstStat, 1, true))
                             or string.find(text, player.Name, 1, true) then
                             playerLabels[label] = player
                             updatePlayerLabel(player, label)
@@ -23304,14 +23314,14 @@ if (is_gaia or is_khei) then
                     return
                 end
 
-                for _, label in ipairs(leaderboardFrame:GetChildren()) do
-                    if label:IsA("TextLabel") then
+                for _, label in ipairs(leaderboardFrame:GetDescendants()) do
+                    if label:IsA("TextLabel") or label:IsA("TextButton") then
                         processLeaderboardLabel(label)
                     end
                 end
 
-                leaderboard_connections[#leaderboard_connections + 1] = utility:Connection(leaderboardFrame.ChildAdded, function(label)
-                    if label:IsA("TextLabel") then
+                leaderboard_connections[#leaderboard_connections + 1] = utility:Connection(leaderboardFrame.DescendantAdded, function(label)
+                    if label:IsA("TextLabel") or label:IsA("TextButton") then
                         task.wait(0.1)
                         processLeaderboardLabel(label)
                     end
@@ -27051,6 +27061,12 @@ end
 
             cheat_client.start_better_flight = start_better_flight
             cheat_client.stop_better_flight = stop_better_flight
+
+            pcall(function()
+                if Toggles.better_flight and Toggles.better_flight.Value then
+                    start_better_flight()
+                end
+            end)
         end
 
         do
