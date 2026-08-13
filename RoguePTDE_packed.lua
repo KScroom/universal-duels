@@ -308,7 +308,15 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
     local plr = plrs.LocalPlayer
     local mouse = cloneref(plr:GetMouse())
 
-    local FindFirstChild = game.FindFirstChild
+    local FindFirstChild_raw = game.FindFirstChild
+    local FindFirstChild = function(parent, name, recurse)
+        local r = FindFirstChild_raw(parent, name, recurse)
+        -- leaderstatsfake alias (PTDE)
+        if not r and name == "leaderstats" and typeof(parent) == "Instance" then
+            r = FindFirstChild_raw(parent, "leaderstatsfake", recurse)
+        end
+        return r
+    end
     local WaitForChild = game.WaitForChild
     local FindFirstChildWhichIsA = game.FindFirstChildWhichIsA
     local FindFirstChildOfClass = game.FindFirstChildOfClass
@@ -399,6 +407,17 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
     local is_gaia = game.PlaceId == 5208655184 or game.PlaceId == 109732117428502;
     local is_khei = game.PlaceId == 3541987450 or game.PlaceId == 14341521240;
     local is_rlp = game.PlaceId == 14341521240;
+    local is_ptde = game.PlaceId == 133317834779462
+        or (rps:FindFirstChild("Requests") and rps.Requests:FindFirstChild("GetMouse") ~= nil
+            and not rps.Requests:FindFirstChild("JoinPublicServer")
+            and ws:FindFirstChild("Live") ~= nil);
+    -- PTDE uses readable combat remotes (SetManaChargeState) like RLP, Gaia map content
+    local uses_named_combat_remotes = is_rlp or is_ptde;
+    if is_ptde then
+        is_gaia, is_khei, is_rlp = true, false, false
+        uses_named_combat_remotes = true
+        print("[PTDE] detected named-combat remotes (SetManaChargeState style)")
+    end
     -- Unknown RL copies: prefer Gaia behavior unless Khei markers / force flag
     if game.PlaceId ~= 5208655184 and game.PlaceId ~= 3541987450 and game.PlaceId ~= 109732117428502 and game.PlaceId ~= 14341521240 then
         local force = tostring(getgenv().SM2_ROGUE_MAP or ""):lower()
@@ -2515,7 +2534,9 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
             function utility:charge_mana()
                 if not mana_remote or not self then return end
 
-                if is_gaia then
+                if uses_named_combat_remotes or is_rlp or is_khei then
+                    mana_remote:FireServer(true)
+                elseif is_gaia then
                     mana_remote:FireServer({ math.random(1, 10), math.random() })
                 else
                     mana_remote:FireServer(true)
@@ -2525,7 +2546,9 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
             function utility:decharge_mana()
                 if not mana_remote or not self then return end
 
-                if is_gaia then
+                if uses_named_combat_remotes or is_rlp or is_khei then
+                    mana_remote:FireServer(false)
+                elseif is_gaia then
                     mana_remote:FireServer()
                 else
                     mana_remote:FireServer(false)
@@ -6243,7 +6266,7 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
                         plr:SetAttribute("UberTitle", "")
                     end
                 elseif FindFirstChild(plr, "leaderstats") then
-                    local leaderstats = plr.leaderstats
+                    local leaderstats = (FindFirstChild(plr,"leaderstats") or plr:FindFirstChild("leaderstatsfake"))
                     if FindFirstChild(leaderstats, "FirstName") and FindFirstChild(leaderstats, "LastName") then
                         leaderstats.FirstName.Value = firstName
                         leaderstats.LastName.Value = lastName
@@ -8104,8 +8127,8 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
                                     local hasMaxEdict = player:GetAttribute("MaxEdict") == true
                                     local hasLeaderstat = is_khei
                                         and FindFirstChild(player, "leaderstats")
-                                        and FindFirstChild(player.leaderstats, "MaxEdict")
-                                        and player.leaderstats.MaxEdict.Value == true
+                                        and FindFirstChild((FindFirstChild(player,"leaderstats") or player:FindFirstChild("leaderstatsfake")), "MaxEdict")
+                                        and (FindFirstChild(player,"leaderstats") or player:FindFirstChild("leaderstatsfake")).MaxEdict.Value == true
 
                                     label.TextColor3 = (hasMaxEdict or hasLeaderstat)
                                         and Color3.fromRGB(255, 214, 81)
@@ -21659,7 +21682,20 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
                 end
             end
 
-            if (is_gaia or is_khei) then
+            
+            -- PTDE bind SetManaChargeState
+            local function bind_mana_remote(char)
+                if not char then return end
+                local rem = FindFirstChild(char, "CharacterHandler") and FindFirstChild(char.CharacterHandler, "Remotes")
+                if rem and FindFirstChild(rem, "SetManaChargeState") then
+                    mana_remote = rem.SetManaChargeState
+                    print("[PTDE] mana_remote bound SetManaChargeState")
+                end
+            end
+            bind_mana_remote(plr.Character)
+            utility:Connection(plr.CharacterAdded, bind_mana_remote)
+
+if (is_gaia or is_khei) then
                 old_remote = hookfunction(Instance.new("RemoteEvent").FireServer, function(Event, ...)
                 	local args = {...}
 
@@ -21669,7 +21705,7 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
                         and FindFirstChild(char.CharacterHandler, "Remotes")
 
                     if shared and not mana_remote and remotes_folder and Event.Parent == remotes_folder then
-                        if is_rlp then
+                        if uses_named_combat_remotes or is_rlp then
                             if Event.Name == "SetManaChargeState" then
                                 mana_remote = Event
                             end
@@ -21693,8 +21729,13 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
 
                     if shared and remotes_folder and Event.Parent == remotes_folder then
                         local no_fall_enabled = (Toggles and Toggles.no_fall and Toggles.no_fall.Value) or (trinket_bot and trinket_bot.path_running)
-                        if no_fall_enabled and #args == 2 and typeof(args[2]) == "table" then
-                            return
+                        if no_fall_enabled then
+                            if Event.Name == "ApplyFallDamage" then
+                                return
+                            end
+                            if #args == 2 and typeof(args[2]) == "table" then
+                                return
+                            end
                         end
                     end
                     
@@ -22817,8 +22858,8 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
                 end
 
                 if player:GetAttribute("MaxEdict") or (is_khei and FindFirstChild(player, "leaderstats")
-                    and FindFirstChild(player.leaderstats, "MaxEdict")
-                    and player.leaderstats.MaxEdict.Value) then
+                    and FindFirstChild((FindFirstChild(player,"leaderstats") or player:FindFirstChild("leaderstatsfake")), "MaxEdict")
+                    and (FindFirstChild(player,"leaderstats") or player:FindFirstChild("leaderstatsfake")).MaxEdict.Value) then
                     return hasCharacter and Color3.fromRGB(255, 214, 81) or Color3.fromRGB(180, 160, 7)
                 end
 
@@ -22839,8 +22880,8 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
                     local hasMaxEdict = player:GetAttribute("MaxEdict") == true
                     local hasLeaderstat = is_khei
                         and FindFirstChild(player, "leaderstats")
-                        and FindFirstChild(player.leaderstats, "MaxEdict")
-                        and player.leaderstats.MaxEdict.Value == true
+                        and FindFirstChild((FindFirstChild(player,"leaderstats") or player:FindFirstChild("leaderstatsfake")), "MaxEdict")
+                        and (FindFirstChild(player,"leaderstats") or player:FindFirstChild("leaderstatsfake")).MaxEdict.Value == true
 
                     label.TextColor3 = (hasMaxEdict or hasLeaderstat)
                         and Color3.fromRGB(255, 214, 81)
@@ -24042,7 +24083,7 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
 
                             if player then
                                 local hasMaxEdict = player:GetAttribute("MaxEdict") == true
-                                local hasLeaderstat = is_khei and FindFirstChild(player, "leaderstats") and FindFirstChild(player.leaderstats, "MaxEdict") and player.leaderstats.MaxEdict.Value == true
+                                local hasLeaderstat = is_khei and FindFirstChild(player, "leaderstats") and FindFirstChild((FindFirstChild(player,"leaderstats") or player:FindFirstChild("leaderstatsfake")), "MaxEdict") and (FindFirstChild(player,"leaderstats") or player:FindFirstChild("leaderstatsfake")).MaxEdict.Value == true
 
                                 label.TextColor3 = (hasMaxEdict or hasLeaderstat) and Color3.fromRGB(255, 214, 81) or Color3.new(1, 1, 1)
                             end
