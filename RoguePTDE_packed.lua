@@ -17517,6 +17517,10 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
                 Values = {
                     "Rift Gem", "Mysterious Artifact", "Phoenix Flower", "Azael Horn",
                     "Amulet of the White King", "Lannis's Amulet", "Phoenix Down", "Night Stone", "Howler Friend",
+                    "Spider Cloak", "Philosophers Stone", "Fairfrozen",
+                    "Scroll of Fimbulvetr", "Scroll of Percutiens", "Scroll of Hoppa", "Scroll of Snarvindur",
+                    "Scroll of Manus Dei", "Scroll of Celeritas", "Scroll of Contrarium",
+                    "Astral Shard", "Eternal Ember", "Seraph Soul",
                     "???", "Scroll", "Diamond", "Emerald", "Ruby", "Sapphire", "Ice Essence", "Bound Book",
                     "Idol of the Forgotten", "Old Ring", "Ring", "Goblet", "Old Amulet", "Amulet", "Opal"
                 },
