@@ -5305,6 +5305,24 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
                         return e[1], c, z
                     end
 
+                    -- Astral Shard fallback (mesh stripped): dark neon + purple PE rate 5 on part (not Attachment)
+                    do
+                        local pe = FindFirstChild(v, "ParticleEmitter")
+                        if pe and pe:IsA("ParticleEmitter") and pe.Rate == 5 then
+                            local cs = tostring(pe.Color)
+                            if string.find(cs, "0.298039", 1, true) and string.find(cs, "0.384314", 1, true) then
+                                local c, z = tier_color("artifact")
+                                return "Astral Shard", c, z
+                            end
+                        end
+                        if tostring(v.Color) == "0.105882, 0.164706, 0.207843" and v.Material == Enum.Material.Neon then
+                            if FindFirstChild(v, "PointLight") or FindFirstChild(v, "ParticleEmitter") then
+                                local c, z = tier_color("artifact")
+                                return "Astral Shard", c, z
+                            end
+                        end
+                    end
+
                     -- Particle / attachment mythics & artifacts
                     -- PTDE often uses unnamed Attachment instances — match by class, not name
                     local function first_attachment_pe(part)
