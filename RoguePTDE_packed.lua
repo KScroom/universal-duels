@@ -1006,7 +1006,7 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
             [Vector3.new(2439.07, 199.709, -467.321)] = true,
             [Vector3.new(2439.57, 199.709, -465.071)] = true,
         },
-        artifacts = {"Rift Gem", "Lannis's Amulet", "Amulet of the White King", "Scroll of Fimbulvetr", "Scroll of Percutiens", "Scroll of Hoppa", "Scroll of Snarvindur", "Scroll of Manus Dei", "Spider Cloak", "Night Stone", "Philosophers Stone", "Howler Friend", "Phoenix Down", "Azael Horn", "Mysterious Artifact", "Fairfrozen", "Phoenix Flower"},
+        artifacts = {"Rift Gem", "Lannis's Amulet", "Amulet of the White King", "Scroll of Fimbulvetr", "Scroll of Percutiens", "Scroll of Hoppa", "Scroll of Snarvindur", "Scroll of Manus Dei", "Scroll of Celeritas", "Scroll of Contrarium", "Spider Cloak", "Night Stone", "Philosophers Stone", "Howler Friend", "Phoenix Down", "Azael Horn", "Mysterious Artifact", "Fairfrozen", "Phoenix Flower", "Astral Shard", "Eternal Ember", "Seraph Soul"},
         spec_skills = {"Eyes of Justice", "Justinian's Helm", "Speech", "Undying Justinian", "Handgun", "StaticField", "Chain Lightning", "Flying Mushroom God", "Flying Flower God", "Overgrowth", "Scroomflora", "Mind Read", "Domination Rune", "Bestowal", "Domination", "Despair", "Better Manus Dei", "Better Mori", "Maledicta Terra", "Terrible Scream", "FrostAura", "Ray of Frost", "Aculeor", "Infettare", "Sylvester's Cloak", "Jester's Trick", "Quick Stop", "Abyssbypass", "VeryCoolBard", "Snowball", "Time Halt", "Time Erase", "Jester's Ruse", "Jester's Scheme", "Wallet Swipe", "Epitaph", "Pondus", "Darkness"},
         mod_list = {
             117075515,
@@ -5013,6 +5013,12 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
                     ["Scroll of Hoppa"] = "artifact",
                     ["Scroll of Snarvindur"] = "artifact",
                     ["Scroll of Manus Dei"] = "artifact",
+                    ["Scroll of Celeritas"] = "artifact",
+                    ["Scroll of Contrarium"] = "artifact",
+                    -- PTDE extras (user-reported / pending live mesh map)
+                    ["Astral Shard"] = "artifact",
+                    ["Eternal Ember"] = "artifact",
+                    ["Seraph Soul"] = "artifact",
                     ["Idol of the Forgotten"] = "common",
                     ["Old Ring"] = "common",
                     ["Ring"] = "common",
@@ -5383,6 +5389,11 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
                     ["Scroll of Hoppa"] = "artifact",
                     ["Scroll of Snarvindur"] = "artifact",
                     ["Scroll of Manus Dei"] = "artifact",
+                    ["Scroll of Celeritas"] = "artifact",
+                    ["Scroll of Contrarium"] = "artifact",
+                    ["Astral Shard"] = "artifact",
+                    ["Eternal Ember"] = "artifact",
+                    ["Seraph Soul"] = "artifact",
                     ["Ornament"] = "event",
                     ["Present"] = "event",
                     ["Candy"] = "event",
@@ -17458,11 +17469,17 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
                 Text = "Pick up Mythics/Artifacts",
                 Values = {
                     "Rift Gem", "Mysterious Artifact", "Phoenix Flower", "Azael Horn",
-                    "Amulet of the White King", "Lannis Amulet", "Phoenix Down", "Night Stone", "Howler Friend"
+                    "Amulet of the White King", "Lannis Amulet", "Phoenix Down", "Night Stone", "Howler Friend",
+                    "Spider Cloak", "Philosophers Stone", "Fairfrozen",
+                    "Scroll of Fimbulvetr", "Scroll of Percutiens", "Scroll of Hoppa", "Scroll of Snarvindur",
+                    "Scroll of Manus Dei", "Scroll of Celeritas", "Scroll of Contrarium",
+                    "Astral Shard", "Eternal Ember", "Seraph Soul"
                 },
                 Default = {
                     "Rift Gem", "Mysterious Artifact", "Phoenix Flower", "Azael Horn",
-                    "Amulet of the White King", "Lannis Amulet", "Phoenix Down", "Night Stone", "Howler Friend"
+                    "Amulet of the White King", "Lannis Amulet", "Phoenix Down", "Night Stone", "Howler Friend",
+                    "Spider Cloak", "Scroll of Celeritas", "Scroll of Contrarium", "Scroll of Manus Dei",
+                    "Scroll of Fimbulvetr", "Astral Shard", "Eternal Ember", "Seraph Soul"
                 },
                 Multi = true
             })
@@ -24387,7 +24404,7 @@ if (is_gaia or is_khei) then
                 return math.floor(num)
             end
 
-            local function getArtifactRarity(artifactName)
+                local function getArtifactRarity(artifactName)
                 local mythic_artifacts = {
                     ["Rift Gem"] = true,
                     ["Mysterious Artifact"] = true,
@@ -24397,12 +24414,16 @@ if (is_gaia or is_khei) then
                 local artifact_tier = {
                     ["Amulet of the White King"] = true,
                     ["Lannis's Amulet"] = true,
+                    ["Lannis Amulet"] = true,
                     ["Phoenix Down"] = true,
                     ["Night Stone"] = true,
                     ["Howler Friend"] = true,
                     ["Spider Cloak"] = true,
                     ["Philosophers Stone"] = true,
                     ["Fairfrozen"] = true,
+                    ["Astral Shard"] = true,
+                    ["Eternal Ember"] = true,
+                    ["Seraph Soul"] = true,
                 }
                 local rare_artifacts = {
                     ["Scroll of Fimbulvetr"] = true,
@@ -24410,6 +24431,8 @@ if (is_gaia or is_khei) then
                     ["Scroll of Hoppa"] = true,
                     ["Scroll of Snarvindur"] = true,
                     ["Scroll of Manus Dei"] = true,
+                    ["Scroll of Celeritas"] = true,
+                    ["Scroll of Contrarium"] = true,
                 }
 
                 if mythic_artifacts[artifactName] then
