@@ -645,13 +645,7 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
             trinket_show_area = true,
             trinket_range = 1000,
             -- PTDE default: only highlight mythics / artifacts / event (+ unknown extras as Event)
-            trinket_types = (is_ptde and {
-                ["Common"] = false,
-                ["Rare"] = false,
-                ["Mythic"] = true,
-                ["Artifact"] = true,
-                ["Event"] = true
-            }) or {
+            trinket_types = {
                 ["Common"] = true,
                 ["Rare"] = true,
                 ["Mythic"] = true,
@@ -4945,8 +4939,246 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
                     end
                     return false
                 end
-                
+
+                local function mesh_digits(inst)
+                    if not inst then return nil end
+                    local ok, mid = pcall(function()
+                        if inst:IsA("MeshPart") then
+                            return tostring(inst.MeshId or ""):match("%d+")
+                        end
+                        local sm = inst:FindFirstChildWhichIsA("SpecialMesh") or inst:FindFirstChild("Mesh")
+                        if sm then
+                            return tostring(sm.MeshId or ""):match("%d+")
+                        end
+                        return nil
+                    end)
+                    return ok and mid or nil
+                end
+
+                local function asset_digits(inst)
+                    if not inst or not gethiddenproperty then return nil end
+                    local ok, aid = pcall(function()
+                        return tostring(gethiddenproperty(inst, "AssetId") or ""):gsub("%%20", ""):match("%d+")
+                    end)
+                    return ok and aid or nil
+                end
+
+                local MESH_TRINKETS = {
+                    ["5196782997"] = { "Old Ring", "common" },
+                    ["5196776695"] = { "Ring", "common" },
+                    ["5204003946"] = { "Goblet", "common" },
+                    ["5196577540"] = { "Old Amulet", "common" },
+                    ["5196551436"] = { "Amulet", "common" },
+                    ["5204453430"] = { "Scroll", "rare" },
+                    ["5197099782"] = { "Amulet of the White King", "artifact" },
+                    ["5197111525"] = { "Amulet of the White King", "artifact" },
+                    ["5196963069"] = { "Lannis Amulet", "artifact" },
+                    ["5196975152"] = { "Lannis Amulet", "artifact" },
+                    ["4103271893"] = { "Candy", "event" },
+                    ["4027112893"] = { "Bound Book", "rare" },
+                    ["2520762076"] = { "Howler Friend", "artifact" },
+                    ["2877143560"] = { "Gem", "rare" }, -- color decides below
+                }
+
+                local ASSET_TRINKETS = {
+                    ["2765613127"] = { "Idol of the Forgotten", "common" },
+                    ["15583017412"] = { "Ornament", "event" },
+                    ["15611175305"] = { "Present", "event" },
+                    ["4117970107"] = { "Pumpkin Centerpiece", "event" },
+                }
+
+                local NAME_TRINKETS = {
+                    ["Rift Gem"] = "mythic",
+                    ["Mysterious Artifact"] = "mythic",
+                    ["Azael Horn"] = "mythic",
+                    ["Phoenix Flower"] = "mythic",
+                    ["Amulet of the White King"] = "artifact",
+                    ["Lannis Amulet"] = "artifact",
+                    ["Lannis's Amulet"] = "artifact",
+                    ["Phoenix Down"] = "artifact",
+                    ["Night Stone"] = "artifact",
+                    ["Howler Friend"] = "artifact",
+                    ["Spider Cloak"] = "artifact",
+                    ["Philosophers Stone"] = "artifact",
+                    ["Fairfrozen"] = "artifact",
+                    ["Scroll of Fimbulvetr"] = "artifact",
+                    ["Scroll of Percutiens"] = "artifact",
+                    ["Scroll of Hoppa"] = "artifact",
+                    ["Scroll of Snarvindur"] = "artifact",
+                    ["Scroll of Manus Dei"] = "artifact",
+                    ["Idol of the Forgotten"] = "common",
+                    ["Old Ring"] = "common",
+                    ["Ring"] = "common",
+                    ["Goblet"] = "common",
+                    ["Old Amulet"] = "common",
+                    ["Amulet"] = "common",
+                    ["Opal"] = "common",
+                    ["Scroll"] = "rare",
+                    ["Diamond"] = "rare",
+                    ["Emerald"] = "rare",
+                    ["Ruby"] = "rare",
+                    ["Sapphire"] = "rare",
+                    ["Ice Essence"] = "rare",
+                    ["Bound Book"] = "rare",
+                    ["Ornament"] = "event",
+                    ["Present"] = "event",
+                    ["Candy"] = "event",
+                    ["Scary Mask"] = "event",
+                    ["Pumpkin Centerpiece"] = "event",
+                    ["???"] = "rare",
+                }
+
+                local function tier_color(tier)
+                    local t = cheat_client.trinket_colors[tier] or cheat_client.trinket_colors.none
+                    return t.Color, t.ZIndex
+                end
+
+                local function identify_from_part(v)
+                    if not v or not v:IsA("BasePart") then return nil end
+
+                    -- Exact classic checks first (kept below via fallback call path)
+                    local mid = mesh_digits(v)
+                    local aid = asset_digits(v)
+
+                    if aid and ASSET_TRINKETS[aid] then
+                        local e = ASSET_TRINKETS[aid]
+                        local c, z = tier_color(e[2])
+                        return e[1], c, z
+                    end
+                    if aid and in_table(masks, aid) then
+                        local c, z = tier_color("event")
+                        return "Scary Mask", c, z
+                    end
+
+                    if mid and MESH_TRINKETS[mid] then
+                        local e = MESH_TRINKETS[mid]
+                        if e[1] == "Gem" then
+                            -- ruby/emerald/sapphire/diamond by color
+                            local col = v.Color
+                            local name = "Opal"
+                            if tostring(col) == "0.643137, 0.733333, 0.745098" then
+                                name = "Diamond"
+                            elseif col.G > col.R and col.G > col.B then
+                                name = "Emerald"
+                            elseif col.R > col.G and col.R > col.B then
+                                name = "Ruby"
+                            elseif col.B > col.G and col.B > col.R then
+                                name = "Sapphire"
+                            end
+                            local c, z = tier_color("rare")
+                            return name, c, z
+                        end
+                        local c, z = tier_color(e[2])
+                        return e[1], c, z
+                    end
+
+                    -- Particle / attachment mythics & artifacts
+                    local att = FindFirstChild(v, "Attachment")
+                    if att then
+                        local pe = FindFirstChildOfClass(att, "ParticleEmitter")
+                        if pe then
+                            if pe.Rate == 3 then
+                                local c, z = tier_color("mythic")
+                                return "Mysterious Artifact", c, z
+                            elseif pe.Rate == 5 then
+                                local third = tostring(pe.Color):split(" ")[3]
+                                if third == "0.8" then
+                                    local c, z = tier_color("artifact")
+                                    return "Phoenix Down", c, z
+                                else
+                                    local name = is_khei and "Phoenix Flower" or "Azael Horn"
+                                    local c, z = tier_color("mythic")
+                                    return name, c, z
+                                end
+                            end
+                        end
+                    end
+
+                    if FindFirstChild(v, "OrbParticle") then
+                        local op = v.OrbParticle
+                        if string.match(tostring(op.Color), "0 0.105882 0.596078 0.596078") then
+                            local c, z = tier_color("rare")
+                            return "Ice Essence", c, z
+                        end
+                        local c, z = tier_color("rare")
+                        return "???", c, z
+                    end
+
+                    if FindFirstChild(v, "ParticleEmitter") and not FindFirstChild(v, "Mesh") then
+                        local pe = v.ParticleEmitter
+                        if not string.match(tostring(pe.Color), "0 1 1 1 0 1 1 1 1 0") then
+                            local c, z = tier_color("mythic")
+                            return "Rift Gem", c, z
+                        end
+                    end
+
+                    if v:IsA("MeshPart") and v.BrickColor and v.BrickColor.Name == "Black" and mid then
+                        -- Night Stone heuristic (black mesh trinket)
+                        local c, z = tier_color("artifact")
+                        return "Night Stone", c, z
+                    end
+
+                    return nil
+                end
+
                 function cheat_client:identify_trinket(v)
+                    if not v then
+                        return "Opal", cheat_client.trinket_colors.none.Color, cheat_client.trinket_colors.none.ZIndex
+                    end
+
+                    -- Name on instance / parent model (PTDE sometimes names dinkets)
+                    local function try_name(inst)
+                        if not inst or inst == ws then return nil end
+                        local n = inst.Name
+                        if n and NAME_TRINKETS[n] then
+                            local c, z = tier_color(NAME_TRINKETS[n])
+                            return n, c, z
+                        end
+                        -- soft match without apostrophe variants
+                        if n == "Lannis's Amulet" or n == "Lannis Amulet" then
+                            local c, z = tier_color("artifact")
+                            return "Lannis Amulet", c, z
+                        end
+                        return nil
+                    end
+
+                    local named, named_c, named_z = try_name(v)
+                    if not named then
+                        named, named_c, named_z = try_name(v.Parent)
+                    end
+                    if named then return named, named_c, named_z end
+
+                    local hit, hit_c, hit_z = identify_from_part(v)
+                    if hit then return hit, hit_c, hit_z end
+
+                    -- Deep scan: PTDE Dinkets are often Model/Folder with nested MeshParts
+                    if v.GetDescendants then
+                        for _, d in ipairs(v:GetDescendants()) do
+                            if d:IsA("BasePart") then
+                                local n2, c2, z2 = identify_from_part(d)
+                                if n2 then return n2, c2, z2 end
+                                local nn, nc, nz = try_name(d)
+                                if nn then return nn, nc, nz end
+                            end
+                        end
+                    end
+
+                    -- Walk parents for a named model under Dinkets
+                    do
+                        local p = v.Parent
+                        while p and p ~= ws do
+                            local nn, nc, nz = try_name(p)
+                            if nn then return nn, nc, nz end
+                            if p:IsA("BasePart") then
+                                local n2, c2, z2 = identify_from_part(p)
+                                if n2 then return n2, c2, z2 end
+                            end
+                            if p.Name == "Dinkets" then break end
+                            p = p.Parent
+                        end
+                    end
+
+                    -- Fall through to legacy exact MeshId string checks
                     if (v.ClassName == 'UnionOperation' and gethiddenproperty(v, "AssetId"):gsub("%%20", ""):match("%d+") == "2765613127") then
                         return 'Idol of the Forgotten', cheat_client.trinket_colors.common.Color, cheat_client.trinket_colors.common.ZIndex
 
@@ -5060,6 +5292,17 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
 
                 function cheat_client:classify_highlight_trinket(object, name, color, zindex, is_dinket)
                     local colors = cheat_client.trinket_colors
+
+                    -- Re-identify deeply so Dinkets get real names/tiers
+                    if object and cheat_client.identify_trinket then
+                        local n2, c2, z2 = cheat_client:identify_trinket(object)
+                        if n2 and n2 ~= "Opal" then
+                            name, color, zindex = n2, c2, z2
+                        elseif n2 == "Opal" and c2 == colors.common.Color then
+                            name, color, zindex = n2, c2, z2
+                        end
+                    end
+
                     name = name or "Unknown"
 
                     local tier = cheat_client.highlight_trinket_tiers[name]
@@ -5067,26 +5310,26 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
                         return name, colors[tier].Color, colors[tier].ZIndex
                     end
 
-                    -- Already identified as mythic/artifact/event by mesh logic
-                    if color == colors.mythic.Color or color == colors.artifact.Color or color == colors.event.Color then
+                    if color == colors.mythic.Color or color == colors.artifact.Color or color == colors.event.Color
+                        or color == colors.common.Color or color == colors.rare.Color then
                         return name, color, zindex
                     end
 
-                    -- PTDE extras / unidentified world pickups → show under Event filter
-                    if is_ptde and (is_dinket or color == colors.none.Color or name == "Opal" or name == "Dinket" or name == "Unknown") then
+                    -- Truly unknown PTDE pickup only
+                    if is_ptde and (is_dinket or color == colors.none.Color or name == "Dinket" or name == "Unknown") then
                         local parent = object and object.Parent
-                        if (not name or name == "Opal" or name == "Dinket" or name == "Unknown") and parent and parent ~= ws and parent.Name ~= "Dinkets" and parent.Name ~= "" and parent.Name ~= "Part" and parent.Name ~= "ClickPart" then
+                        if (name == "Opal" or name == "Dinket" or name == "Unknown") and parent and parent ~= ws and parent.Name ~= "Dinkets" and parent.Name ~= "" and parent.Name ~= "Part" and parent.Name ~= "ClickPart" then
                             name = parent.Name
-                        elseif (not name or name == "Opal" or name == "Dinket") and object and object.Name ~= "ClickPart" and object.Name ~= "Part" and object.Name ~= "" then
+                        elseif (name == "Opal" or name == "Dinket") and object and object.Name ~= "ClickPart" and object.Name ~= "Part" and object.Name ~= "" then
                             name = object.Name
-                        elseif not name or name == "Opal" then
+                        elseif name == "Opal" or name == "Unknown" then
                             name = "Unknown Extra"
                         end
-                        -- Prefer mapped tier if parent/object name matched a known item
                         tier = cheat_client.highlight_trinket_tiers[name]
                         if tier and colors[tier] then
                             return name, colors[tier].Color, colors[tier].ZIndex
                         end
+                        -- Unknown extras stay Event so the Event filter still catches them
                         return name, colors.event.Color, colors.event.ZIndex
                     end
 
@@ -8322,7 +8565,7 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
                 group_misc_esp:AddDropdown("TrinketTypes", {
                     Text = "Show Types",
                     Values = {"Common", "Rare", "Mythic", "Artifact", "Event"},
-                    Default = is_ptde and {3, 4, 5} or {1, 2, 3, 4, 5},
+                    Default = {1, 2, 3, 4, 5},
                     Multi = true,
                     Callback = function(value)
                         cheat_client.config.trinket_types = value
@@ -25846,16 +26089,34 @@ end
                 auto_trinket_enabled = true
 
                 trinkets = {}
+                local function under_dinkets(object)
+                    local p = object
+                    while p and p ~= ws do
+                        if p.Name == "Dinkets" then return true end
+                        p = p.Parent
+                    end
+                    return false
+                end
                 local function add_tr(object)
-                    if object and object:IsA("BasePart") and FindFirstChild(object, "ID") then
+                    if not object or not object:IsA("BasePart") then return end
+                    if FindFirstChild(object, "ID") then
+                        trinkets[#trinkets + 1] = object
+                        return
+                    end
+                    if is_ptde and under_dinkets(object) and (FindFirstChild(object, "ClickDetector") or object.Name == "ClickPart") then
                         trinkets[#trinkets + 1] = object
                     end
                 end
-                for _, object in next, ws:GetChildren() do
-                    add_tr(object)
-                end
                 for _, object in next, ws:GetDescendants() do
                     add_tr(object)
+                end
+                if is_ptde then
+                    local dinkets = ws:FindFirstChild("Dinkets")
+                    if dinkets then
+                        utility:Connection(dinkets.DescendantAdded, function(obj)
+                            if auto_trinket_enabled then add_tr(obj) end
+                        end)
+                    end
                 end
 
                 cheat_client.feature_connections.auto_trinket = utility:Connection(rs.Heartbeat, LPH_NO_VIRTUALIZE(function(delta_time)
@@ -25873,12 +26134,29 @@ end
                             continue
                         end
 
+                        -- Respect ESP type filters when set
+                        if Options and Options.TrinketTypes and Options.TrinketTypes.Value then
+                            local _, trinket_color = cheat_client:identify_trinket(object)
+                            local filters = Options.TrinketTypes.Value
+                            local ok = false
+                            if trinket_color == cheat_client.trinket_colors.common.Color and filters["Common"] then ok = true end
+                            if trinket_color == cheat_client.trinket_colors.rare.Color and filters["Rare"] then ok = true end
+                            if trinket_color == cheat_client.trinket_colors.mythic.Color and filters["Mythic"] then ok = true end
+                            if trinket_color == cheat_client.trinket_colors.artifact.Color and filters["Artifact"] then ok = true end
+                            if trinket_color == cheat_client.trinket_colors.event.Color and filters["Event"] then ok = true end
+                            if not ok then continue end
+                        end
+
                         local click_detector = FindFirstChild(object, "ClickDetector", true)
+                        if not click_detector and object.Parent then
+                            click_detector = FindFirstChild(object.Parent, "ClickDetector", true)
+                        end
                         local distance = plr:DistanceFromCharacter(object.CFrame.Position)
                         local dist = 9e9
 
                         if click_detector then
                             dist = click_detector.MaxActivationDistance
+                            if is_ptde and dist < 20 then dist = 20 end
                         end
 
                         if click_detector and distance > 0 and distance < dist then
@@ -25889,7 +26167,7 @@ end
                                     table.remove(cheat_client.trinket_bot.pending_pickup_ids, 1)
                                 end
                             end
-                            fireclickdetector(click_detector)
+                            pcall(fireclickdetector, click_detector)
                         end
                     end
                 end), true)
