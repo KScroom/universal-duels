@@ -5112,13 +5112,74 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
                         end
                     end
 
-                    if v:IsA("MeshPart") and v.BrickColor and v.BrickColor.Name == "Black" and mid then
-                        -- Night Stone heuristic (black mesh trinket)
+                    -- Classic Opal: sphere SpecialMesh on a Part
+                    do
+                        local sm = FindFirstChildWhichIsA(v, "SpecialMesh") or FindFirstChild(v, "Mesh")
+                        if v.ClassName == "Part" and sm and sm.MeshType == Enum.MeshType.Sphere then
+                            local midEmpty = not tostring(sm.MeshId or ""):match("%d+")
+                            if midEmpty and FindFirstChild(v, "ParticleEmitter") then
+                                local c, z = tier_color("common")
+                                return "Opal", c, z
+                            end
+                        end
+                    end
+
+                    -- Night Stone: black MeshPart that is NOT Howler Friend mesh
+                    if v:IsA("MeshPart") and v.BrickColor and v.BrickColor.Name == "Black" and mid and mid ~= "2520762076" then
                         local c, z = tier_color("artifact")
                         return "Night Stone", c, z
                     end
 
                     return nil
+                end
+
+                local function collect_linked_parts(root)
+                    local parts = {}
+                    local seen = {}
+                    local function add(p)
+                        if p and p:IsA("BasePart") and not seen[p] then
+                            seen[p] = true
+                            table.insert(parts, p)
+                        end
+                    end
+                    if not root then return parts end
+                    add(root)
+                    if root.GetDescendants then
+                        for _, d in ipairs(root:GetDescendants()) do
+                            if d:IsA("BasePart") then
+                                add(d)
+                            elseif d:IsA("Weld") or d:IsA("WeldConstraint") or d:IsA("ManualWeld") then
+                                pcall(function()
+                                    add(d.Part0)
+                                    add(d.Part1)
+                                end)
+                            end
+                        end
+                    end
+                    -- PTDE: ClickPart often welds to a MeshPart that is NOT a descendant
+                    for _, d in ipairs(root:GetChildren()) do
+                        if d:IsA("Weld") or d:IsA("WeldConstraint") or d:IsA("ManualWeld") then
+                            pcall(function()
+                                add(d.Part0)
+                                add(d.Part1)
+                            end)
+                        end
+                    end
+                    -- If still only ClickPart-like, grab nearby MeshParts (visual sits beside click proxy)
+                    if root:IsA("BasePart") and #parts <= 1 then
+                        local ok, nearby = pcall(function()
+                            return ws:GetPartBoundsInRadius(root.Position, 4)
+                        end)
+                        if ok and nearby then
+                            for _, p in ipairs(nearby) do
+                                if p:IsA("MeshPart") or p:FindFirstChildWhichIsA("SpecialMesh") or p:FindFirstChild("Mesh") or p:IsA("UnionOperation") then
+                                    add(p)
+                                end
+                                if #parts >= 8 then break end
+                            end
+                        end
+                    end
+                    return parts
                 end
 
                 function cheat_client:identify_trinket(v)
@@ -5151,15 +5212,13 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
                     local hit, hit_c, hit_z = identify_from_part(v)
                     if hit then return hit, hit_c, hit_z end
 
-                    -- Deep scan: PTDE Dinkets are often Model/Folder with nested MeshParts
-                    if v.GetDescendants then
-                        for _, d in ipairs(v:GetDescendants()) do
-                            if d:IsA("BasePart") then
-                                local n2, c2, z2 = identify_from_part(d)
-                                if n2 then return n2, c2, z2 end
-                                local nn, nc, nz = try_name(d)
-                                if nn then return nn, nc, nz end
-                            end
+                    -- Deep scan + weld-linked visuals (PTDE ClickPart -> welded MeshPart)
+                    for _, d in ipairs(collect_linked_parts(v)) do
+                        if d ~= v then
+                            local n2, c2, z2 = identify_from_part(d)
+                            if n2 then return n2, c2, z2 end
+                            local nn, nc, nz = try_name(d)
+                            if nn then return nn, nc, nz end
                         end
                     end
 
@@ -5171,6 +5230,10 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
                             if nn then return nn, nc, nz end
                             if p:IsA("BasePart") then
                                 local n2, c2, z2 = identify_from_part(p)
+                                if n2 then return n2, c2, z2 end
+                            end
+                            for _, d in ipairs(collect_linked_parts(p)) do
+                                local n2, c2, z2 = identify_from_part(d)
                                 if n2 then return n2, c2, z2 end
                             end
                             if p.Name == "Dinkets" then break end
