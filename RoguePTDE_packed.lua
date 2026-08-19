@@ -5412,6 +5412,9 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
                     elseif (v.ClassName == 'Part' and FindFirstChildWhichIsA(v, "SpecialMesh") and FindFirstChild(v, 'ParticleEmitter') and FindFirstChildWhichIsA(v, "SpecialMesh").MeshId == "" and FindFirstChildWhichIsA(v, "SpecialMesh").MeshType == Enum.MeshType.Sphere) then
                         return 'Opal', cheat_client.trinket_colors.common.Color, cheat_client.trinket_colors.common.ZIndex
                     elseif (v.ClassName == 'MeshPart' and v.MeshId == 'rbxassetid://5204453430') then
+                        if is_ptde then
+                            return "Opal", cheat_client.trinket_colors.none.Color, cheat_client.trinket_colors.none.ZIndex
+                        end
                         return 'Scroll', cheat_client.trinket_colors.rare.Color, cheat_client.trinket_colors.rare.ZIndex
                     elseif (FindFirstChild(v, 'Mesh') and v.Mesh.MeshId == 'rbxassetid://%202877143560%20' and FindFirstChild(v, 'ParticleEmitter') and string.match(tostring(v.ParticleEmitter.Color), '0 1 1 1 0 1 1 1 1 0') and v.ClassName == 'Part' and tostring(v.Color) == '0.643137, 0.733333, 0.745098') then
                         return 'Diamond', cheat_client.trinket_colors.rare.Color, cheat_client.trinket_colors.rare.ZIndex
