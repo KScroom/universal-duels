@@ -4985,6 +4985,133 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
                     ["2877143560"] = { "Gem", "rare" }, -- color decides below
                 }
 
+                -- Runtime-learned PTDE artifact signatures (from backpack/equipped tools on any player)
+                -- e.g. Astral Shard / Seraph Soul when seen on your other account
+                cheat_client.learned_mesh_trinkets = cheat_client.learned_mesh_trinkets or {}
+                cheat_client.learned_pe_trinkets = cheat_client.learned_pe_trinkets or {}
+                cheat_client.learned_color_trinkets = cheat_client.learned_color_trinkets or {}
+
+                local LEARN_TOOL_NAMES = {
+                    ["Astral Shard"] = "Astral Shard",
+                    ["Astral"] = "Astral Shard",
+                    ["Seraph Soul"] = "Seraph Soul",
+                    ["Seraph"] = "Seraph Soul",
+                    ["Serpent Soul"] = "Seraph Soul",
+                    ["Serpent"] = "Seraph Soul",
+                    ["Eternal Ember"] = "Eternal Ember",
+                    ["Ember"] = "Eternal Ember",
+                }
+
+                local function register_learned_sig(label, part)
+                    if not label or not part or not part:IsA("BasePart") then return end
+                    local mid = mesh_digits(part)
+                    local aid = asset_digits(part)
+                    local col = tostring(part.Color)
+                    if mid and mid ~= "" and not SCROLL_MESH_IDS[mid] and not MESH_TRINKETS[mid] then
+                        cheat_client.learned_mesh_trinkets[mid] = { label, "artifact" }
+                        MESH_TRINKETS[mid] = { label, "artifact" }
+                    end
+                    if aid and aid ~= "" and not ASSET_TRINKETS[aid] then
+                        ASSET_TRINKETS[aid] = { label, "artifact" }
+                    end
+                    -- unique-ish union/part colors (skip common white/gray click proxies)
+                    if col ~= "0.639216, 0.635294, 0.647059" and col ~= "0.388235, 0.372549, 0.384314" then
+                        local s = part.Size
+                        if s.Magnitude > 0.15 and s.Magnitude < 8 then
+                            cheat_client.learned_color_trinkets[col] = cheat_client.learned_color_trinkets[col] or {
+                                name = label,
+                                size = { s.X, s.Y, s.Z },
+                                class = part.ClassName,
+                                material = tostring(part.Material),
+                            }
+                        end
+                    end
+                    for _, d in ipairs(part:GetDescendants()) do
+                        if d:IsA("ParticleEmitter") then
+                            local rate = tonumber(d.Rate) or 0
+                            if rate > 0 and rate ~= 3 and rate ~= 5 then -- 3/5 already PD/Mysterious/Azael
+                                local key = string.format("%s|%s|%d", d.Name, tostring(d.Color), rate)
+                                cheat_client.learned_pe_trinkets[key] = {
+                                    name = label,
+                                    pe_name = d.Name,
+                                    rate = rate,
+                                    color = tostring(d.Color),
+                                }
+                            end
+                        end
+                    end
+                    -- also direct children PEs (Attachment nests)
+                    for _, d in ipairs(part:GetDescendants()) do
+                        if d:IsA("BasePart") then
+                            local m2 = mesh_digits(d)
+                            if m2 and m2 ~= "" and not SCROLL_MESH_IDS[m2] and not MESH_TRINKETS[m2] then
+                                cheat_client.learned_mesh_trinkets[m2] = { label, "artifact" }
+                                MESH_TRINKETS[m2] = { label, "artifact" }
+                            end
+                        end
+                    end
+                end
+
+                local function harvest_learnable_instance(inst)
+                    if not inst then return end
+                    local label = LEARN_TOOL_NAMES[inst.Name]
+                    if not label then return end
+                    local parts = {}
+                    if inst:IsA("BasePart") then
+                        table.insert(parts, inst)
+                    end
+                    for _, d in ipairs(inst:GetDescendants()) do
+                        if d:IsA("BasePart") and d.Name ~= "ClickPart" then
+                            table.insert(parts, d)
+                        end
+                    end
+                    -- prefer Handle / largest visual
+                    table.sort(parts, function(a, b)
+                        local ah = (a.Name == "Handle") and 1 or 0
+                        local bh = (b.Name == "Handle") and 1 or 0
+                        if ah ~= bh then return ah > bh end
+                        return a.Size.Magnitude > b.Size.Magnitude
+                    end)
+                    for i = 1, math.min(4, #parts) do
+                        register_learned_sig(label, parts[i])
+                    end
+                end
+
+                cheat_client.learn_artifact_signatures = function()
+                    local function scan_container(cont)
+                        if not cont then return end
+                        for _, child in ipairs(cont:GetChildren()) do
+                            harvest_learnable_instance(child)
+                            if child.Name == "Artifacts" then
+                                for _, a in ipairs(child:GetChildren()) do
+                                    harvest_learnable_instance(a)
+                                end
+                            end
+                        end
+                    end
+                    for _, p in ipairs(plrs:GetPlayers()) do
+                        scan_container(p:FindFirstChild("Backpack"))
+                        scan_container(p.Character)
+                        local live = ws:FindFirstChild("Live")
+                        if live then
+                            local ch = live:FindFirstChild(p.Name)
+                            if ch then
+                                scan_container(ch)
+                                scan_container(ch:FindFirstChild("Artifacts"))
+                            end
+                        end
+                    end
+                end
+
+                task.spawn(function()
+                    task.wait(2)
+                    pcall(cheat_client.learn_artifact_signatures)
+                    while task.wait(5) do
+                        if shared.is_unloading then break end
+                        pcall(cheat_client.learn_artifact_signatures)
+                    end
+                end)
+
                 local SCROLL_MESH_IDS = {
                     ["5204453430"] = true,
                     ["5204409188"] = true,
@@ -5265,6 +5392,50 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
                     if v:IsA("MeshPart") and v.BrickColor and v.BrickColor.Name == "Black" and mid and mid ~= "2520762076" then
                         local c, z = tier_color("artifact")
                         return "Nightstone", c, z
+                    end
+
+                    -- Learned from Astral Shard / Seraph Soul (etc.) when seen on a player
+                    if cheat_client.learned_pe_trinkets then
+                        local function match_pe(pe)
+                            if not pe or not pe:IsA("ParticleEmitter") then return nil end
+                            local exact = cheat_client.learned_pe_trinkets[string.format("%s|%s|%d", pe.Name, tostring(pe.Color), pe.Rate)]
+                            if exact then return exact.name end
+                            for _, sig in pairs(cheat_client.learned_pe_trinkets) do
+                                if sig.rate == pe.Rate and sig.pe_name == pe.Name then
+                                    return sig.name
+                                end
+                            end
+                            return nil
+                        end
+                        local named = match_pe(v:FindFirstChildWhichIsA("ParticleEmitter"))
+                        if not named then
+                            for _, d in ipairs(v:GetDescendants()) do
+                                named = match_pe(d)
+                                if named then break end
+                            end
+                        end
+                        if named then
+                            local c, z = tier_color("artifact")
+                            return named, c, z
+                        end
+                    end
+                    if cheat_client.learned_color_trinkets then
+                        local sig = cheat_client.learned_color_trinkets[tostring(v.Color)]
+                        if sig and sig.class == v.ClassName then
+                            local sx, sy, sz = v.Size.X, v.Size.Y, v.Size.Z
+                            local okSize = math.abs(sx - sig.size[1]) < 0.35
+                                and math.abs(sy - sig.size[2]) < 0.35
+                                and math.abs(sz - sig.size[3]) < 0.35
+                            if okSize then
+                                local c, z = tier_color("artifact")
+                                return sig.name, c, z
+                            end
+                        end
+                    end
+                    if mid and cheat_client.learned_mesh_trinkets and cheat_client.learned_mesh_trinkets[mid] then
+                        local e = cheat_client.learned_mesh_trinkets[mid]
+                        local c, z = tier_color(e[2] or "artifact")
+                        return e[1], c, z
                     end
 
                     return nil
