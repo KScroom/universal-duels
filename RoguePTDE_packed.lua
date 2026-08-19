@@ -5550,6 +5550,113 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
 
                     return name, color, zindex
                 end
+
+                -- PTDE helpers: resolve ClickPart + deferred identify (particles spawn after ClickPart)
+                cheat_client.under_dinkets = function(object)
+                    local p = object
+                    while p and p ~= ws do
+                        if p.Name == "Dinkets" then return true end
+                        p = p.Parent
+                    end
+                    return false
+                end
+
+                cheat_client.get_dinket_clickpart = function(object)
+                    if not object then return nil end
+                    if object.Name == "ClickPart" and object:IsA("BasePart") then return object end
+                    if object:IsA("ClickDetector") and object.Parent and object.Parent:IsA("BasePart") then
+                        return object.Parent.Name == "ClickPart" and object.Parent or object.Parent
+                    end
+                    local cp = object:FindFirstChild("ClickPart", true)
+                    if cp and cp:IsA("BasePart") then return cp end
+                    -- climb to dinket root then find ClickPart
+                    local p = object
+                    while p and p.Parent and p.Parent.Name ~= "Dinkets" do
+                        p = p.Parent
+                    end
+                    if p and p.Parent and p.Parent.Name == "Dinkets" then
+                        cp = p:FindFirstChild("ClickPart", true)
+                        if cp and cp:IsA("BasePart") then return cp end
+                        if p:IsA("BasePart") and p:FindFirstChildWhichIsA("ClickDetector") then return p end
+                    end
+                    return nil
+                end
+
+                cheat_client.apply_trinket_esp = function(object, force)
+                    if not is_ptde or not object then return end
+                    if not cheat_client.under_dinkets(object) then return end
+
+                    local click = cheat_client.get_dinket_clickpart(object)
+                    if not click then
+                        if object:IsA("BasePart") then
+                            click = object
+                        else
+                            return
+                        end
+                    end
+                    if not click:IsA("BasePart") then return end
+                    if cheat_client.is_scroll_trinket and cheat_client.is_scroll_trinket(click) then return end
+
+                    local name, color, zindex = cheat_client:identify_trinket(click)
+                    if cheat_client.classify_highlight_trinket then
+                        name, color, zindex = cheat_client:classify_highlight_trinket(click, name, color, zindex, true)
+                    end
+                    if not name or name == "Scroll" or string.find(tostring(name), "Scroll of", 1, true) then return end
+
+                    cheat_client.trinket_esp_objects = cheat_client.trinket_esp_objects or {}
+                    local existing = cheat_client.trinket_esp_objects[click]
+                    if existing then
+                        if force or existing.name ~= name or existing.color ~= color then
+                            existing.name = name
+                            existing.color = color
+                            existing.zindex = zindex or existing.zindex
+                            existing.cached_text = ""
+                            if existing.drawings and existing.drawings.main_text then
+                                existing.drawings.main_text.Color = color
+                                existing.drawings.main_text.Text = name
+                            end
+                        end
+                        return
+                    end
+
+                    if not (Toggles and Toggles.TrinketEsp and Toggles.TrinketEsp.Value) then return end
+                    cheat_client:add_trinket_esp(click, name, color, zindex)
+                end
+
+                -- Deduped deferred identify: particles/attachments often spawn after ClickPart
+                cheat_client._dinket_esp_queued = cheat_client._dinket_esp_queued or {}
+                cheat_client.queue_dinket_esp = function(object)
+                    if not is_ptde or not object then return end
+                    local click = cheat_client.get_dinket_clickpart(object)
+                    local key = click or object
+                    if cheat_client._dinket_esp_queued[key] then
+                        -- still re-apply soon so late particles refresh the label
+                        task.delay(0.85, function()
+                            if key and key.Parent then
+                                cheat_client.apply_trinket_esp(key, true)
+                            end
+                        end)
+                        return
+                    end
+                    cheat_client._dinket_esp_queued[key] = true
+                    task.defer(function()
+                        task.wait(0.15)
+                        if key and key.Parent then
+                            cheat_client.apply_trinket_esp(key, true)
+                        end
+                    end)
+                    task.delay(0.55, function()
+                        if key and key.Parent then
+                            cheat_client.apply_trinket_esp(key, true)
+                        end
+                    end)
+                    task.delay(1.1, function()
+                        cheat_client._dinket_esp_queued[key] = nil
+                        if key and key.Parent then
+                            cheat_client.apply_trinket_esp(key, true)
+                        end
+                    end)
+                end
         
                 function cheat_client:add_trinket_esp(trinket, name, color, zindex)
                     if is_ptde and cheat_client.is_scroll_trinket and (cheat_client.is_scroll_trinket(trinket) or cheat_client.is_scroll_trinket(name)) then
@@ -8740,38 +8847,50 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
                 Toggles.TrinketEsp:OnChanged(function()
                     if Toggles.TrinketEsp.Value then
                         cheat_client.trinket_esp_objects = cheat_client.trinket_esp_objects or {}
-                        local function under_folder(object, folderName)
-                            local p = object and object.Parent
-                            while p and p ~= ws do
-                                if p.Name == folderName then return true end
-                                p = p.Parent
-                            end
-                            return false
-                        end
-                        local function consider_trinket(object)
-                            if not object or not object:IsA("BasePart") then return end
-                            if cheat_client.trinket_esp_objects[object] then return end
-                            local has_id = FindFirstChild(object, "ID") ~= nil
-                            local is_dinket = is_ptde and under_folder(object, "Dinkets") and (FindFirstChild(object, "ClickDetector") ~= nil or object.Name == "ClickPart")
-                            if not has_id and not is_dinket then return end
-                            if is_ptde and cheat_client.is_scroll_trinket and cheat_client.is_scroll_trinket(object) then return end
-                            local trinket_name, trinket_color, trinket_zindex = cheat_client:identify_trinket(object)
-                            if is_ptde and (not trinket_name or trinket_name == "Scroll" or string.find(tostring(trinket_name), "Scroll of", 1, true)) then
-                                if cheat_client.is_scroll_trinket and cheat_client.is_scroll_trinket(object) then return end
-                                if trinket_name == "Scroll" or string.find(tostring(trinket_name), "Scroll of", 1, true) then return end
-                            end
-                            trinket_name, trinket_color, trinket_zindex = cheat_client:classify_highlight_trinket(object, trinket_name, trinket_color, trinket_zindex, is_dinket)
-                            if is_ptde and (trinket_name == "Scroll" or string.find(tostring(trinket_name), "Scroll of", 1, true)) then return end
-                            cheat_client:add_trinket_esp(object, trinket_name, trinket_color, trinket_zindex)
-                        end
-                        for _, object in pairs(ws:GetChildren()) do
-                            consider_trinket(object)
-                        end
-                        for _, object in pairs(ws:GetDescendants()) do
-                            consider_trinket(object)
-                        end
-
                         cheat_client.esp_rendering.start_trinket_esp()
+
+                        -- PTDE: only scan Dinkets (chunked) — never whole Workspace (freezes)
+                        task.spawn(function()
+                            if is_ptde then
+                                local dinkets = ws:FindFirstChild("Dinkets")
+                                if not dinkets then return end
+                                local kids = dinkets:GetChildren()
+                                local n = 0
+                                for _, root in ipairs(kids) do
+                                    if not Toggles.TrinketEsp.Value then return end
+                                    local cp = root:FindFirstChild("ClickPart", true) or root
+                                    if cheat_client.apply_trinket_esp then
+                                        cheat_client.apply_trinket_esp(cp, true)
+                                    end
+                                    n = n + 1
+                                    if n % 40 == 0 then
+                                        task.wait()
+                                    end
+                                end
+                            else
+                                local function under_folder(object, folderName)
+                                    local p = object and object.Parent
+                                    while p and p ~= ws do
+                                        if p.Name == folderName then return true end
+                                        p = p.Parent
+                                    end
+                                    return false
+                                end
+                                local function consider_trinket(object)
+                                    if not object or not object:IsA("BasePart") then return end
+                                    if cheat_client.trinket_esp_objects[object] then return end
+                                    if FindFirstChild(object, "ID") == nil then return end
+                                    local trinket_name, trinket_color, trinket_zindex = cheat_client:identify_trinket(object)
+                                    if cheat_client.classify_highlight_trinket then
+                                        trinket_name, trinket_color, trinket_zindex = cheat_client:classify_highlight_trinket(object, trinket_name, trinket_color, trinket_zindex, false)
+                                    end
+                                    cheat_client:add_trinket_esp(object, trinket_name, trinket_color, trinket_zindex)
+                                end
+                                for _, object in pairs(ws:GetChildren()) do
+                                    consider_trinket(object)
+                                end
+                            end
+                        end)
                     else
                         cheat_client.esp_rendering.stop_trinket_esp()
 
@@ -23242,30 +23361,28 @@ if (is_gaia or is_khei) then
     
         do
             local function consider_live_trinket(object)
-                if not cheat_client or not object or not object:IsA("BasePart") then return end
+                if not cheat_client or not object then return end
+
+                -- PTDE: any new piece under Dinkets (ClickPart / ClickDetector / Attachment / PE) → deferred ESP
+                if is_ptde and cheat_client.under_dinkets and cheat_client.under_dinkets(object) then
+                    if not (Toggles and Toggles.TrinketEsp and Toggles.TrinketEsp.Value) then return end
+                    if object:IsA("BasePart") or object:IsA("ClickDetector") or object:IsA("Attachment") or object:IsA("ParticleEmitter") or object:IsA("SpecialMesh") then
+                        if cheat_client.queue_dinket_esp then
+                            cheat_client.queue_dinket_esp(object)
+                        end
+                    end
+                    return
+                end
+
+                if not object:IsA("BasePart") then return end
                 if cheat_client.trinket_esp_objects and cheat_client.trinket_esp_objects[object] then return end
                 local has_id = FindFirstChild(object, "ID") ~= nil
-                local in_dinkets = false
-                do
-                    local p = object.Parent
-                    while p and p ~= ws do
-                        if p.Name == "Dinkets" then in_dinkets = true break end
-                        p = p.Parent
-                    end
-                end
-                local is_dinket = is_ptde and in_dinkets and (FindFirstChild(object, "ClickDetector") ~= nil or object.Name == "ClickPart")
-                if not has_id and not is_dinket then return end
-                if not (Toggles and Toggles.TrinketEsp and Toggles.TrinketEsp.Value) and not has_id then
-                    -- still register classic ID parts; dinkets only when ESP on
-                    if is_dinket then return end
-                end
+                if not has_id then return end
+                if not (Toggles and Toggles.TrinketEsp and Toggles.TrinketEsp.Value) then return end
                 local trinket_name, trinket_color, trinket_zindex = cheat_client:identify_trinket(object)
-                if is_ptde and cheat_client.is_scroll_trinket and cheat_client.is_scroll_trinket(object) then return end
-                if is_ptde and (trinket_name == "Scroll" or (trinket_name and string.find(trinket_name, "Scroll of", 1, true))) then return end
                 if cheat_client.classify_highlight_trinket then
-                    trinket_name, trinket_color, trinket_zindex = cheat_client:classify_highlight_trinket(object, trinket_name, trinket_color, trinket_zindex, is_dinket)
+                    trinket_name, trinket_color, trinket_zindex = cheat_client:classify_highlight_trinket(object, trinket_name, trinket_color, trinket_zindex, false)
                 end
-                if is_ptde and (trinket_name == "Scroll" or (trinket_name and string.find(trinket_name, "Scroll of", 1, true))) then return end
                 cheat_client:add_trinket_esp(object, trinket_name, trinket_color, trinket_zindex)
             end
 
@@ -23273,23 +23390,28 @@ if (is_gaia or is_khei) then
                 if object.Name == "Part" and FindFirstChild(object, "ID") then
                     consider_live_trinket(object)
                 elseif is_ptde and object.Name == "Dinkets" then
-                    for _, d in ipairs(object:GetDescendants()) do
-                        consider_live_trinket(d)
-                    end
                     utility:Connection(object.DescendantAdded, function(d)
                         consider_live_trinket(d)
                     end)
+                    for _, d in ipairs(object:GetChildren()) do
+                        consider_live_trinket(d)
+                    end
                 end
             end)
 
             if is_ptde then
                 local dinkets = ws:FindFirstChild("Dinkets")
                 if dinkets then
-                    for _, d in ipairs(dinkets:GetDescendants()) do
-                        consider_live_trinket(d)
-                    end
                     utility:Connection(dinkets.DescendantAdded, function(d)
                         consider_live_trinket(d)
+                    end)
+                    utility:Connection(dinkets.DescendantRemoving, function(d)
+                        if cheat_client.trinket_esp_objects and cheat_client.trinket_esp_objects[d] then
+                            if cheat_client.trinket_esp_objects[d].destruct then
+                                cheat_client.trinket_esp_objects[d]:destruct()
+                            end
+                            cheat_client.trinket_esp_objects[d] = nil
+                        end
                     end)
                 end
             end
@@ -26335,79 +26457,161 @@ end
                 if cheat_client.feature_connections.auto_trinket then return end
 
                 auto_trinket_enabled = true
-
                 trinkets = {}
-                local function under_dinkets(object)
-                    local p = object
-                    while p and p ~= ws do
-                        if p.Name == "Dinkets" then return true end
-                        p = p.Parent
-                    end
-                    return false
+                local seen = {}
+
+                local function register_clickpart(click)
+                    if not click or not click:IsA("BasePart") or seen[click] then return end
+                    if is_ptde and cheat_client.is_scroll_trinket and cheat_client.is_scroll_trinket(click) then return end
+                    seen[click] = true
+                    trinkets[#trinkets + 1] = click
                 end
+
                 local function add_tr(object)
-                    if not object or not object:IsA("BasePart") then return end
-                    if FindFirstChild(object, "ID") then
-                        trinkets[#trinkets + 1] = object
+                    if not object then return end
+                    if FindFirstChild(object, "ID") and object:IsA("BasePart") then
+                        register_clickpart(object)
                         return
                     end
-                    if is_ptde and under_dinkets(object) and (FindFirstChild(object, "ClickDetector") or object.Name == "ClickPart") then
-                        trinkets[#trinkets + 1] = object
+                    if not is_ptde then return end
+                    if not (cheat_client.under_dinkets and cheat_client.under_dinkets(object)) then return end
+                    local click = cheat_client.get_dinket_clickpart and cheat_client.get_dinket_clickpart(object)
+                    if click then
+                        register_clickpart(click)
                     end
                 end
-                for _, object in next, ws:GetDescendants() do
-                    add_tr(object)
-                end
+
+                -- PTDE: only Dinkets children (chunked). Classic: workspace Parts with ID.
+                task.spawn(function()
+                    if is_ptde then
+                        local dinkets = ws:FindFirstChild("Dinkets")
+                        if not dinkets then return end
+                        local kids = dinkets:GetChildren()
+                        local n = 0
+                        for _, root in ipairs(kids) do
+                            if not auto_trinket_enabled then return end
+                            add_tr(root)
+                            n = n + 1
+                            if n % 50 == 0 then task.wait() end
+                        end
+                    else
+                        for _, object in next, ws:GetChildren() do
+                            if object.Name == "Part" and FindFirstChild(object, "ID") then
+                                add_tr(object)
+                            end
+                        end
+                    end
+                end)
+
                 if is_ptde then
                     local dinkets = ws:FindFirstChild("Dinkets")
-                    if dinkets then
-                        utility:Connection(dinkets.DescendantAdded, function(obj)
+                    local function hook_dinkets(folder)
+                        if not folder then return end
+                        utility:Connection(folder.DescendantAdded, function(obj)
                             if auto_trinket_enabled then add_tr(obj) end
+                        end)
+                        utility:Connection(folder.ChildAdded, function(obj)
+                            if auto_trinket_enabled then add_tr(obj) end
+                        end)
+                    end
+                    if dinkets then
+                        hook_dinkets(dinkets)
+                    else
+                        utility:Connection(ws.ChildAdded, function(obj)
+                            if obj.Name == "Dinkets" then hook_dinkets(obj) end
                         end)
                     end
                 end
 
+                local function should_auto_pickup(object)
+                    local name, color = cheat_client:identify_trinket(object)
+                    if is_ptde and cheat_client.classify_highlight_trinket then
+                        name, color = cheat_client:classify_highlight_trinket(object, name, color, nil, true)
+                    end
+                    name = tostring(name or "")
+                    if name == "Azael Horn" then return false end
+                    if name == "Scroll" or string.find(name, "Scroll of", 1, true) then return false end
+                    if is_ptde and cheat_client.is_scroll_trinket and cheat_client.is_scroll_trinket(object) then return false end
+
+                    -- PTDE Auto Trinket: pick anything in range (except scrolls/Azael).
+                    -- Don't hard-require TrinketTypes — those are ESP filters and early Unknown IDs would block pickup.
+                    if is_ptde then
+                        local filters = Options and Options.TrinketTypes and Options.TrinketTypes.Value
+                        if filters then
+                            local any = filters["Common"] or filters["Rare"] or filters["Mythic"] or filters["Artifact"] or filters["Event"]
+                            if any then
+                                local colors = cheat_client.trinket_colors
+                                local ok = false
+                                if colors then
+                                    if color == colors.common.Color and filters["Common"] then ok = true end
+                                    if color == colors.rare.Color and filters["Rare"] then ok = true end
+                                    if color == colors.mythic.Color and filters["Mythic"] then ok = true end
+                                    if color == colors.artifact.Color and filters["Artifact"] then ok = true end
+                                    if color == colors.event.Color and filters["Event"] then ok = true end
+                                end
+                                -- Unknown / not yet identified: still pick up (particles may not exist yet)
+                                if not ok and (name == "" or name == "Unknown" or name == "Trinket") then
+                                    ok = true
+                                end
+                                if not ok then return false end
+                            end
+                        end
+                        return true
+                    end
+
+                    local filters = Options and Options.TrinketTypes and Options.TrinketTypes.Value
+                    if filters then
+                        local ok = false
+                        local colors = cheat_client.trinket_colors
+                        if colors then
+                            if color == colors.common.Color and filters["Common"] then ok = true end
+                            if color == colors.rare.Color and filters["Rare"] then ok = true end
+                            if color == colors.mythic.Color and filters["Mythic"] then ok = true end
+                            if color == colors.artifact.Color and filters["Artifact"] then ok = true end
+                            if color == colors.event.Color and filters["Event"] then ok = true end
+                        end
+                        if not ok then return false end
+                    end
+                    return true
+                end
+
+                local function fire_pickup(click_detector)
+                    if not click_detector then return end
+                    -- PTDE often needs MaxDistance override + both fire paths
+                    pcall(function()
+                        if typeof(fireclickdetector) == "function" then
+                            fireclickdetector(click_detector)
+                            fireclickdetector(click_detector, click_detector.MaxActivationDistance)
+                        end
+                    end)
+                end
+
                 cheat_client.feature_connections.auto_trinket = utility:Connection(rs.Heartbeat, LPH_NO_VIRTUALIZE(function(delta_time)
-                    if not plr.Character then return end
+                    if not auto_trinket_enabled or not plr.Character then return end
 
                     for i = #trinkets, 1, -1 do
-                        if not trinkets[i] or not trinkets[i].Parent then
+                        local t = trinkets[i]
+                        if not t or not t.Parent then
+                            if t then seen[t] = nil end
                             table.remove(trinkets, i)
                         end
                     end
 
                     for _, object in next, trinkets do
-                        local trinket_name = cheat_client:identify_trinket(object)
-                        if trinket_name == "Azael Horn" then
-                            continue
-                        end
+                        if not should_auto_pickup(object) then continue end
 
-                        -- Respect ESP type filters when set
-                        if Options and Options.TrinketTypes and Options.TrinketTypes.Value then
-                            local _, trinket_color = cheat_client:identify_trinket(object)
-                            local filters = Options.TrinketTypes.Value
-                            local ok = false
-                            if trinket_color == cheat_client.trinket_colors.common.Color and filters["Common"] then ok = true end
-                            if trinket_color == cheat_client.trinket_colors.rare.Color and filters["Rare"] then ok = true end
-                            if trinket_color == cheat_client.trinket_colors.mythic.Color and filters["Mythic"] then ok = true end
-                            if trinket_color == cheat_client.trinket_colors.artifact.Color and filters["Artifact"] then ok = true end
-                            if trinket_color == cheat_client.trinket_colors.event.Color and filters["Event"] then ok = true end
-                            if not ok then continue end
-                        end
-
-                        local click_detector = FindFirstChild(object, "ClickDetector", true)
+                        local click_detector = FindFirstChild(object, "ClickDetector")
+                            or FindFirstChild(object, "ClickDetector", true)
                         if not click_detector and object.Parent then
                             click_detector = FindFirstChild(object.Parent, "ClickDetector", true)
                         end
-                        local distance = plr:DistanceFromCharacter(object.CFrame.Position)
-                        local dist = 9e9
+                        if not click_detector then continue end
 
-                        if click_detector then
-                            dist = click_detector.MaxActivationDistance
-                            if is_ptde and dist < 20 then dist = 20 end
-                        end
+                        local distance = plr:DistanceFromCharacter(object.Position)
+                        local dist = click_detector.MaxActivationDistance or 32
+                        if is_ptde and dist < 32 then dist = 32 end
 
-                        if click_detector and distance > 0 and distance < dist then
+                        if distance > 0 and distance <= dist then
                             local trinket_id = FindFirstChild(object, "ID")
                             if trinket_id and trinket_id:IsA("StringValue") and cheat_client.trinket_bot and cheat_client.trinket_bot.pending_pickup_ids then
                                 table.insert(cheat_client.trinket_bot.pending_pickup_ids, trinket_id.Value)
@@ -26415,7 +26619,7 @@ end
                                     table.remove(cheat_client.trinket_bot.pending_pickup_ids, 1)
                                 end
                             end
-                            pcall(fireclickdetector, click_detector)
+                            fire_pickup(click_detector)
                         end
                     end
                 end), true)
