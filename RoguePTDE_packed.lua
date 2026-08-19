@@ -1006,7 +1006,7 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
             [Vector3.new(2439.07, 199.709, -467.321)] = true,
             [Vector3.new(2439.57, 199.709, -465.071)] = true,
         },
-        artifacts = {"Rift Gem", "Lannis's Amulet", "Amulet of the White King", "Scroll of Fimbulvetr", "Scroll of Percutiens", "Scroll of Hoppa", "Scroll of Snarvindur", "Scroll of Manus Dei", "Scroll of Celeritas", "Scroll of Contrarium", "Spider Cloak", "Night Stone", "Philosophers Stone", "Howler Friend", "Phoenix Down", "Azael Horn", "Mysterious Artifact", "Fairfrozen", "Phoenix Flower", "Astral Shard", "Eternal Ember", "Seraph Soul"},
+        artifacts = {"Rift Gem", "Lannis's Amulet", "Amulet of the White King", "Scroll of Fimbulvetr", "Scroll of Percutiens", "Scroll of Hoppa", "Scroll of Snarvindur", "Scroll of Manus Dei", "Scroll of Celeritas", "Scroll of Contrarium", "Spider Cloak", "Night Stone", "Nightstone", "Philosophers Stone", "Howler Friend", "Phoenix Down", "Azael Horn", "Mysterious Artifact", "Fairfrozen", "Phoenix Flower", "Eternal Ember", "Astral Shard", "Seraph Soul", "Cursed Tag"},
         spec_skills = {"Eyes of Justice", "Justinian's Helm", "Speech", "Undying Justinian", "Handgun", "StaticField", "Chain Lightning", "Flying Mushroom God", "Flying Flower God", "Overgrowth", "Scroomflora", "Mind Read", "Domination Rune", "Bestowal", "Domination", "Despair", "Better Manus Dei", "Better Mori", "Maledicta Terra", "Terrible Scream", "FrostAura", "Ray of Frost", "Aculeor", "Infettare", "Sylvester's Cloak", "Jester's Trick", "Quick Stop", "Abyssbypass", "VeryCoolBard", "Snowball", "Time Halt", "Time Erase", "Jester's Ruse", "Jester's Scheme", "Wallet Swipe", "Epitaph", "Pondus", "Darkness"},
         mod_list = {
             117075515,
@@ -5004,10 +5004,16 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
                     ["Lannis's Amulet"] = "artifact",
                     ["Phoenix Down"] = "artifact",
                     ["Night Stone"] = "artifact",
+                    ["Nightstone"] = "artifact",
                     ["Howler Friend"] = "artifact",
                     ["Spider Cloak"] = "artifact",
                     ["Philosophers Stone"] = "artifact",
                     ["Fairfrozen"] = "artifact",
+                    ["Eternal Ember"] = "artifact",
+                    ["Ember"] = "artifact",
+                    ["Astral Shard"] = "artifact",
+                    ["Seraph Soul"] = "artifact",
+                    ["Cursed Tag"] = "rare",
                     ["Scroll of Fimbulvetr"] = "artifact",
                     ["Scroll of Percutiens"] = "artifact",
                     ["Scroll of Hoppa"] = "artifact",
@@ -5015,10 +5021,6 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
                     ["Scroll of Manus Dei"] = "artifact",
                     ["Scroll of Celeritas"] = "artifact",
                     ["Scroll of Contrarium"] = "artifact",
-                    -- PTDE extras (user-reported / pending live mesh map)
-                    ["Astral Shard"] = "artifact",
-                    ["Eternal Ember"] = "artifact",
-                    ["Seraph Soul"] = "artifact",
                     ["Idol of the Forgotten"] = "common",
                     ["Old Ring"] = "common",
                     ["Ring"] = "common",
@@ -5066,6 +5068,10 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
                     -- PTDE Idol: UnionOperation with locked AssetId (often 0) + slate color
                     if v:IsA("UnionOperation") then
                         local col = tostring(v.Color)
+                        if col == "0.113725, 0.180392, 0.227451" then
+                            local c, z = tier_color("artifact")
+                            return "Nightstone", c, z
+                        end
                         if col == "0.435294, 0.443137, 0.490196" or (v.Color.R > 0.4 and v.Color.R < 0.5 and v.Color.B > 0.45 and v.Color.B < 0.55) then
                             local c, z = tier_color("common")
                             return "Idol of the Forgotten", c, z
@@ -5117,13 +5123,40 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
                     end
 
                     if FindFirstChild(v, "OrbParticle") then
+                        -- PTDE Eternal Ember: dual OrbParticle rate 200, gold/yellow sequence
+                        local isEmber = false
+                        for _, op in ipairs(v:GetChildren()) do
+                            if op:IsA("ParticleEmitter") and op.Name == "OrbParticle" and op.Rate == 200 then
+                                local cs = tostring(op.Color)
+                                if string.match(cs, "0%.97") or string.match(cs, "0%.74") or string.match(cs, "0%.062") or string.match(cs, "0%.715") or string.match(cs, "0%.060") then
+                                    isEmber = true
+                                    break
+                                end
+                            end
+                        end
+                        if isEmber or (tostring(v.Color) == "1, 1, 0" and FindFirstChild(v, "OrbParticle")) then
+                            local c, z = tier_color("artifact")
+                            return "Eternal Ember", c, z
+                        end
                         local op = v.OrbParticle
-                        if string.match(tostring(op.Color), "0 0.105882 0.596078 0.596078") then
+                        if string.match(tostring(op.Color), "0 0.105882 0.596078 0.596078") or string.match(tostring(op.Color), "0%.098") or string.match(tostring(op.Color), "0%.72549") then
                             local c, z = tier_color("rare")
                             return "Ice Essence", c, z
                         end
                         local c, z = tier_color("rare")
                         return "???", c, z
+                    end
+
+                    -- Also scan nested OrbParticle (PTDE world dinkets)
+                    do
+                        local op = v:FindFirstChild("OrbParticle", true)
+                        if op and op:IsA("ParticleEmitter") and op.Rate == 200 then
+                            local cs = tostring(op.Color)
+                            if string.match(cs, "0%.97") or string.match(cs, "0%.74") or string.match(cs, "0%.062") or tostring(v.Color) == "1, 1, 0" then
+                                local c, z = tier_color("artifact")
+                                return "Eternal Ember", c, z
+                            end
+                        end
                     end
 
                     if FindFirstChild(v, "ParticleEmitter") and not FindFirstChild(v, "Mesh") then
@@ -5140,9 +5173,14 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
                         if v.ClassName == "Part" and sm and sm.MeshType == Enum.MeshType.Sphere then
                             local midEmpty = not tostring(sm.MeshId or ""):gsub("%%20", ""):match("%d+")
                             if midEmpty then
-                                local pe = FindFirstChild(v, "ParticleEmitter")
+                                local pe = FindFirstChild(v, "ParticleEmitter") or FindFirstChild(v, "OrbParticle")
                                 if pe and pe.Rate and pe.Rate >= 50 then
-                                    if string.match(tostring(pe.Color), "0%.09") or string.match(tostring(pe.Color), "0%.10") or string.match(tostring(pe.Color), "0%.105") then
+                                    local cs = tostring(pe.Color)
+                                    if string.match(cs, "0%.97") or string.match(cs, "0%.74") or string.match(cs, "0%.062") or tostring(v.Color) == "1, 1, 0" then
+                                        local c, z = tier_color("artifact")
+                                        return "Eternal Ember", c, z
+                                    end
+                                    if string.match(cs, "0%.09") or string.match(cs, "0%.10") or string.match(cs, "0%.105") or string.match(cs, "0%.098") then
                                         local c, z = tier_color("rare")
                                         return "Ice Essence", c, z
                                     end
@@ -5157,10 +5195,10 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
                         end
                     end
 
-                    -- Night Stone: black MeshPart that is NOT Howler Friend mesh
+                    -- Night Stone / Nightstone: black MeshPart that is NOT Howler Friend mesh
                     if v:IsA("MeshPart") and v.BrickColor and v.BrickColor.Name == "Black" and mid and mid ~= "2520762076" then
                         local c, z = tier_color("artifact")
-                        return "Night Stone", c, z
+                        return "Nightstone", c, z
                     end
 
                     return nil
@@ -5380,10 +5418,13 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
                     ["Lannis's Amulet"] = "artifact",
                     ["Phoenix Down"] = "artifact",
                     ["Night Stone"] = "artifact",
+                    ["Nightstone"] = "artifact",
                     ["Howler Friend"] = "artifact",
                     ["Spider Cloak"] = "artifact",
                     ["Philosophers Stone"] = "artifact",
                     ["Fairfrozen"] = "artifact",
+                    ["Eternal Ember"] = "artifact",
+                    ["Ember"] = "artifact",
                     ["Scroll of Fimbulvetr"] = "artifact",
                     ["Scroll of Percutiens"] = "artifact",
                     ["Scroll of Hoppa"] = "artifact",
@@ -5392,8 +5433,8 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
                     ["Scroll of Celeritas"] = "artifact",
                     ["Scroll of Contrarium"] = "artifact",
                     ["Astral Shard"] = "artifact",
-                    ["Eternal Ember"] = "artifact",
                     ["Seraph Soul"] = "artifact",
+                    ["Cursed Tag"] = "rare",
                     ["Ornament"] = "event",
                     ["Present"] = "event",
                     ["Candy"] = "event",
@@ -17469,17 +17510,17 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
                 Text = "Pick up Mythics/Artifacts",
                 Values = {
                     "Rift Gem", "Mysterious Artifact", "Phoenix Flower", "Azael Horn",
-                    "Amulet of the White King", "Lannis Amulet", "Phoenix Down", "Night Stone", "Howler Friend",
-                    "Spider Cloak", "Philosophers Stone", "Fairfrozen",
+                    "Amulet of the White King", "Lannis Amulet", "Phoenix Down", "Night Stone", "Nightstone", "Howler Friend",
+                    "Spider Cloak", "Philosophers Stone", "Fairfrozen", "Eternal Ember",
                     "Scroll of Fimbulvetr", "Scroll of Percutiens", "Scroll of Hoppa", "Scroll of Snarvindur",
                     "Scroll of Manus Dei", "Scroll of Celeritas", "Scroll of Contrarium",
-                    "Astral Shard", "Eternal Ember", "Seraph Soul"
+                    "Astral Shard", "Seraph Soul", "Cursed Tag"
                 },
                 Default = {
                     "Rift Gem", "Mysterious Artifact", "Phoenix Flower", "Azael Horn",
-                    "Amulet of the White King", "Lannis Amulet", "Phoenix Down", "Night Stone", "Howler Friend",
-                    "Spider Cloak", "Scroll of Celeritas", "Scroll of Contrarium", "Scroll of Manus Dei",
-                    "Scroll of Fimbulvetr", "Astral Shard", "Eternal Ember", "Seraph Soul"
+                    "Amulet of the White King", "Lannis Amulet", "Phoenix Down", "Night Stone", "Nightstone", "Howler Friend",
+                    "Spider Cloak", "Eternal Ember", "Scroll of Manus Dei",
+                    "Scroll of Fimbulvetr", "Astral Shard", "Seraph Soul"
                 },
                 Multi = true
             })
