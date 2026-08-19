@@ -38,7 +38,7 @@ local function status(t)
 end
 
 status("Downloading script...")
-local URL = "https://raw.githubusercontent.com/KScroom/universal-duels/master/RoguePTDE_packed.lua?v=ptde18"
+local URL = "https://raw.githubusercontent.com/KScroom/universal-duels/master/RoguePTDE_packed.lua?v=ptde19"
 local req = (syn and syn.request) or (http and http.request) or http_request or request
 local function download(url)
 	if req then
