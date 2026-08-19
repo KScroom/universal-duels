@@ -4974,9 +4974,7 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
                     ["13116112"] = { "Goblet", "common" }, -- PTDE goblet decorative mesh
                     ["5196577540"] = { "Old Amulet", "common" },
                     ["5196551436"] = { "Amulet", "common" },
-                    ["5204453430"] = { "Scroll", "rare" },
-                    ["5204409188"] = { "Scroll", "rare" }, -- PTDE scroll ribbon
-                    ["5204409890"] = { "Scroll", "rare" },
+                    -- scrolls omitted: PTDE cannot tell scroll type until picked up
                     ["5197099782"] = { "Amulet of the White King", "artifact" },
                     ["5197111525"] = { "Amulet of the White King", "artifact" },
                     ["5196963069"] = { "Lannis Amulet", "artifact" },
@@ -4986,6 +4984,44 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
                     ["2520762076"] = { "Howler Friend", "artifact" },
                     ["2877143560"] = { "Gem", "rare" }, -- color decides below
                 }
+
+                local SCROLL_MESH_IDS = {
+                    ["5204453430"] = true,
+                    ["5204409188"] = true,
+                    ["5204409890"] = true,
+                    ["60791940"] = true,
+                }
+
+                local function is_scroll_part(part)
+                    if not part then return false end
+                    local mid = mesh_digits(part)
+                    if mid and SCROLL_MESH_IDS[mid] then return true end
+                    for _, d in ipairs(part:GetDescendants()) do
+                        if d:IsA("BasePart") or d:IsA("SpecialMesh") then
+                            local m = mesh_digits(d:IsA("SpecialMesh") and d.Parent or d)
+                            if d:IsA("SpecialMesh") then
+                                m = tostring(d.MeshId or ""):gsub("%%20", ""):match("%d+")
+                            end
+                            if m and SCROLL_MESH_IDS[m] then return true end
+                        end
+                    end
+                    return false
+                end
+
+                cheat_client.is_scroll_trinket = function(object)
+                    if not object then return false end
+                    if type(object) == "string" then
+                        return object == "Scroll" or object:find("Scroll of", 1, true) ~= nil
+                    end
+                    if object.Name == "Scroll" or (type(object.Name) == "string" and object.Name:find("Scroll of", 1, true)) then
+                        return true
+                    end
+                    if is_scroll_part(object) then return true end
+                    if object.Name == "ClickPart" and object.Parent then
+                        return is_scroll_part(object.Parent)
+                    end
+                    return false
+                end
 
                 local ASSET_TRINKETS = {
                     ["2765613127"] = { "Idol of the Forgotten", "common" },
@@ -5011,16 +5047,10 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
                     ["Fairfrozen"] = "artifact",
                     ["Eternal Ember"] = "artifact",
                     ["Ember"] = "artifact",
+                    ["Lannis / White King"] = "artifact",
                     ["Astral Shard"] = "artifact",
                     ["Seraph Soul"] = "artifact",
                     ["Cursed Tag"] = "rare",
-                    ["Scroll of Fimbulvetr"] = "artifact",
-                    ["Scroll of Percutiens"] = "artifact",
-                    ["Scroll of Hoppa"] = "artifact",
-                    ["Scroll of Snarvindur"] = "artifact",
-                    ["Scroll of Manus Dei"] = "artifact",
-                    ["Scroll of Celeritas"] = "artifact",
-                    ["Scroll of Contrarium"] = "artifact",
                     ["Idol of the Forgotten"] = "common",
                     ["Old Ring"] = "common",
                     ["Ring"] = "common",
@@ -5028,7 +5058,6 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
                     ["Old Amulet"] = "common",
                     ["Amulet"] = "common",
                     ["Opal"] = "common",
-                    ["Scroll"] = "rare",
                     ["Diamond"] = "rare",
                     ["Emerald"] = "rare",
                     ["Ruby"] = "rare",
@@ -5065,7 +5094,7 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
                         return "Scary Mask", c, z
                     end
 
-                    -- PTDE Idol: UnionOperation with locked AssetId (often 0) + slate color
+                    -- PTDE Idol / Nightstone / artifact amulets (UnionOperations, AssetId often locked)
                     if v:IsA("UnionOperation") then
                         local col = tostring(v.Color)
                         if col == "0.113725, 0.180392, 0.227451" then
@@ -5076,6 +5105,30 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
                             local c, z = tier_color("common")
                             return "Idol of the Forgotten", c, z
                         end
+                        -- Lannis / White King: tall neon white unions (meshes differ if present)
+                        if col == "0.972549, 0.972549, 0.972549" and v.Material == Enum.Material.Neon then
+                            local s = v.Size
+                            if s.Y > 1.4 and s.X < 0.4 then
+                                for _, d in ipairs(v:GetDescendants()) do
+                                    local m = mesh_digits(d)
+                                    if m == "5197099782" or m == "5197111525" then
+                                        local c, z = tier_color("artifact")
+                                        return "Amulet of the White King", c, z
+                                    elseif m == "5196963069" or m == "5196975152" then
+                                        local c, z = tier_color("artifact")
+                                        return "Lannis Amulet", c, z
+                                    end
+                                end
+                                -- PTDE often strips nested meshes; both amulets share the same union look
+                                local c, z = tier_color("artifact")
+                                return "Lannis / White King", c, z
+                            end
+                        end
+                    end
+
+                    -- Skip scrolls entirely on PTDE (type unknown until pickup)
+                    if mid and SCROLL_MESH_IDS[mid] then
+                        return nil
                     end
 
                     if mid and MESH_TRINKETS[mid] then
@@ -5101,23 +5154,36 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
                     end
 
                     -- Particle / attachment mythics & artifacts
-                    local att = FindFirstChild(v, "Attachment")
-                    if att then
-                        local pe = FindFirstChildOfClass(att, "ParticleEmitter")
-                        if pe then
-                            if pe.Rate == 3 then
+                    -- PTDE often uses unnamed Attachment instances — match by class, not name
+                    local function first_attachment_pe(part)
+                        if not part then return nil end
+                        for _, ch in ipairs(part:GetChildren()) do
+                            if ch:IsA("Attachment") then
+                                local pe = ch:FindFirstChildWhichIsA("ParticleEmitter")
+                                if pe then return pe end
+                            end
+                        end
+                        local att = FindFirstChild(part, "Attachment") or part:FindFirstChildWhichIsA("Attachment")
+                        if att then
+                            return FindFirstChildOfClass(att, "ParticleEmitter") or att:FindFirstChildWhichIsA("ParticleEmitter")
+                        end
+                        return nil
+                    end
+
+                    local peAtt = first_attachment_pe(v)
+                    if peAtt then
+                        if peAtt.Rate == 3 then
+                            local c, z = tier_color("mythic")
+                            return "Mysterious Artifact", c, z
+                        elseif peAtt.Rate == 5 then
+                            local third = tostring(peAtt.Color):split(" ")[3]
+                            if third == "0.8" then
+                                local c, z = tier_color("artifact")
+                                return "Phoenix Down", c, z
+                            else
+                                local name = is_khei and "Phoenix Flower" or "Azael Horn"
                                 local c, z = tier_color("mythic")
-                                return "Mysterious Artifact", c, z
-                            elseif pe.Rate == 5 then
-                                local third = tostring(pe.Color):split(" ")[3]
-                                if third == "0.8" then
-                                    local c, z = tier_color("artifact")
-                                    return "Phoenix Down", c, z
-                                else
-                                    local name = is_khei and "Phoenix Flower" or "Azael Horn"
-                                    local c, z = tier_color("mythic")
-                                    return name, c, z
-                                end
+                                return name, c, z
                             end
                         end
                     end
@@ -5416,6 +5482,7 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
                     ["Amulet of the White King"] = "artifact",
                     ["Lannis Amulet"] = "artifact",
                     ["Lannis's Amulet"] = "artifact",
+                    ["Lannis / White King"] = "artifact",
                     ["Phoenix Down"] = "artifact",
                     ["Night Stone"] = "artifact",
                     ["Nightstone"] = "artifact",
@@ -5425,13 +5492,6 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
                     ["Fairfrozen"] = "artifact",
                     ["Eternal Ember"] = "artifact",
                     ["Ember"] = "artifact",
-                    ["Scroll of Fimbulvetr"] = "artifact",
-                    ["Scroll of Percutiens"] = "artifact",
-                    ["Scroll of Hoppa"] = "artifact",
-                    ["Scroll of Snarvindur"] = "artifact",
-                    ["Scroll of Manus Dei"] = "artifact",
-                    ["Scroll of Celeritas"] = "artifact",
-                    ["Scroll of Contrarium"] = "artifact",
                     ["Astral Shard"] = "artifact",
                     ["Seraph Soul"] = "artifact",
                     ["Cursed Tag"] = "rare",
@@ -5489,6 +5549,12 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
                 end
         
                 function cheat_client:add_trinket_esp(trinket, name, color, zindex)
+                    if is_ptde and cheat_client.is_scroll_trinket and (cheat_client.is_scroll_trinket(trinket) or cheat_client.is_scroll_trinket(name)) then
+                        return
+                    end
+                    if is_ptde and name and (name == "Scroll" or string.find(name, "Scroll of", 1, true)) then
+                        return
+                    end
                     local esp = {
                         object = trinket,
                         name = name,
@@ -8685,8 +8751,14 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
                             local has_id = FindFirstChild(object, "ID") ~= nil
                             local is_dinket = is_ptde and under_folder(object, "Dinkets") and (FindFirstChild(object, "ClickDetector") ~= nil or object.Name == "ClickPart")
                             if not has_id and not is_dinket then return end
+                            if is_ptde and cheat_client.is_scroll_trinket and cheat_client.is_scroll_trinket(object) then return end
                             local trinket_name, trinket_color, trinket_zindex = cheat_client:identify_trinket(object)
+                            if is_ptde and (not trinket_name or trinket_name == "Scroll" or string.find(tostring(trinket_name), "Scroll of", 1, true)) then
+                                if cheat_client.is_scroll_trinket and cheat_client.is_scroll_trinket(object) then return end
+                                if trinket_name == "Scroll" or string.find(tostring(trinket_name), "Scroll of", 1, true) then return end
+                            end
                             trinket_name, trinket_color, trinket_zindex = cheat_client:classify_highlight_trinket(object, trinket_name, trinket_color, trinket_zindex, is_dinket)
+                            if is_ptde and (trinket_name == "Scroll" or string.find(tostring(trinket_name), "Scroll of", 1, true)) then return end
                             cheat_client:add_trinket_esp(object, trinket_name, trinket_color, trinket_zindex)
                         end
                         for _, object in pairs(ws:GetChildren()) do
@@ -23185,9 +23257,12 @@ if (is_gaia or is_khei) then
                     if is_dinket then return end
                 end
                 local trinket_name, trinket_color, trinket_zindex = cheat_client:identify_trinket(object)
+                if is_ptde and cheat_client.is_scroll_trinket and cheat_client.is_scroll_trinket(object) then return end
+                if is_ptde and (trinket_name == "Scroll" or (trinket_name and string.find(trinket_name, "Scroll of", 1, true))) then return end
                 if cheat_client.classify_highlight_trinket then
                     trinket_name, trinket_color, trinket_zindex = cheat_client:classify_highlight_trinket(object, trinket_name, trinket_color, trinket_zindex, is_dinket)
                 end
+                if is_ptde and (trinket_name == "Scroll" or (trinket_name and string.find(trinket_name, "Scroll of", 1, true))) then return end
                 cheat_client:add_trinket_esp(object, trinket_name, trinket_color, trinket_zindex)
             end
 
@@ -24462,12 +24537,14 @@ if (is_gaia or is_khei) then
                     ["Lannis Amulet"] = true,
                     ["Phoenix Down"] = true,
                     ["Night Stone"] = true,
+                    ["Nightstone"] = true,
                     ["Howler Friend"] = true,
                     ["Spider Cloak"] = true,
                     ["Philosophers Stone"] = true,
                     ["Fairfrozen"] = true,
                     ["Astral Shard"] = true,
                     ["Eternal Ember"] = true,
+                    ["Ember"] = true,
                     ["Seraph Soul"] = true,
                 }
                 local rare_artifacts = {
