@@ -4943,12 +4943,16 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
                 local function mesh_digits(inst)
                     if not inst then return nil end
                     local ok, mid = pcall(function()
+                        local function dig(raw)
+                            return tostring(raw or ""):gsub("%%20", ""):gsub("%s+", ""):match("%d+")
+                        end
                         if inst:IsA("MeshPart") then
-                            return tostring(inst.MeshId or ""):match("%d+")
+                            local id = dig(inst.MeshId)
+                            if id then return id end
                         end
                         local sm = inst:FindFirstChildWhichIsA("SpecialMesh") or inst:FindFirstChild("Mesh")
                         if sm then
-                            return tostring(sm.MeshId or ""):match("%d+")
+                            return dig(sm.MeshId)
                         end
                         return nil
                     end)
@@ -4967,9 +4971,12 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
                     ["5196782997"] = { "Old Ring", "common" },
                     ["5196776695"] = { "Ring", "common" },
                     ["5204003946"] = { "Goblet", "common" },
+                    ["13116112"] = { "Goblet", "common" }, -- PTDE goblet decorative mesh
                     ["5196577540"] = { "Old Amulet", "common" },
                     ["5196551436"] = { "Amulet", "common" },
                     ["5204453430"] = { "Scroll", "rare" },
+                    ["5204409188"] = { "Scroll", "rare" }, -- PTDE scroll ribbon
+                    ["5204409890"] = { "Scroll", "rare" },
                     ["5197099782"] = { "Amulet of the White King", "artifact" },
                     ["5197111525"] = { "Amulet of the White King", "artifact" },
                     ["5196963069"] = { "Lannis Amulet", "artifact" },
@@ -5050,6 +5057,15 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
                         return "Scary Mask", c, z
                     end
 
+                    -- PTDE Idol: UnionOperation with locked AssetId (often 0) + slate color
+                    if v:IsA("UnionOperation") then
+                        local col = tostring(v.Color)
+                        if col == "0.435294, 0.443137, 0.490196" or (v.Color.R > 0.4 and v.Color.R < 0.5 and v.Color.B > 0.45 and v.Color.B < 0.55) then
+                            local c, z = tier_color("common")
+                            return "Idol of the Forgotten", c, z
+                        end
+                    end
+
                     if mid and MESH_TRINKETS[mid] then
                         local e = MESH_TRINKETS[mid]
                         if e[1] == "Gem" then
@@ -5116,10 +5132,21 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
                     do
                         local sm = FindFirstChildWhichIsA(v, "SpecialMesh") or FindFirstChild(v, "Mesh")
                         if v.ClassName == "Part" and sm and sm.MeshType == Enum.MeshType.Sphere then
-                            local midEmpty = not tostring(sm.MeshId or ""):match("%d+")
-                            if midEmpty and FindFirstChild(v, "ParticleEmitter") then
-                                local c, z = tier_color("common")
-                                return "Opal", c, z
+                            local midEmpty = not tostring(sm.MeshId or ""):gsub("%%20", ""):match("%d+")
+                            if midEmpty then
+                                local pe = FindFirstChild(v, "ParticleEmitter")
+                                if pe and pe.Rate and pe.Rate >= 50 then
+                                    if string.match(tostring(pe.Color), "0%.09") or string.match(tostring(pe.Color), "0%.10") or string.match(tostring(pe.Color), "0%.105") then
+                                        local c, z = tier_color("rare")
+                                        return "Ice Essence", c, z
+                                    end
+                                    local c, z = tier_color("rare")
+                                    return "???", c, z
+                                end
+                                if FindFirstChild(v, "ParticleEmitter") then
+                                    local c, z = tier_color("common")
+                                    return "Opal", c, z
+                                end
                             end
                         end
                     end
@@ -5208,6 +5235,16 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
                         named, named_c, named_z = try_name(v.Parent)
                     end
                     if named then return named, named_c, named_z end
+
+                    -- PTDE: ClickPart is only the click proxy; real mesh is the parent Dinket root
+                    if v.Name == "ClickPart" and v.Parent and v.Parent ~= ws and v.Parent.Name ~= "Dinkets" then
+                        local n2, c2, z2 = identify_from_part(v.Parent)
+                        if n2 then return n2, c2, z2 end
+                        for _, d in ipairs(collect_linked_parts(v.Parent)) do
+                            local n3, c3, z3 = identify_from_part(d)
+                            if n3 then return n3, c3, z3 end
+                        end
+                    end
 
                     local hit, hit_c, hit_z = identify_from_part(v)
                     if hit then return hit, hit_c, hit_z end
