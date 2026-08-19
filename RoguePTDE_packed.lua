@@ -4983,6 +4983,7 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
                     ["4027112893"] = { "Bound Book", "rare" },
                     ["2520762076"] = { "Howler Friend", "artifact" },
                     ["2877143560"] = { "Gem", "rare" }, -- color decides below
+                    ["7030942623"] = { "Astral Shard", "artifact" },
                 }
 
                 -- Runtime-learned PTDE artifact signatures (from backpack/equipped tools on any player)
@@ -4990,6 +4991,7 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
                 cheat_client.learned_mesh_trinkets = cheat_client.learned_mesh_trinkets or {}
                 cheat_client.learned_pe_trinkets = cheat_client.learned_pe_trinkets or {}
                 cheat_client.learned_color_trinkets = cheat_client.learned_color_trinkets or {}
+                cheat_client._learned_notified = cheat_client._learned_notified or {}
 
                 local LEARN_TOOL_NAMES = {
                     ["Astral Shard"] = "Astral Shard",
@@ -5002,53 +5004,76 @@ if ALLOWED_PLACE_IDS[game.PlaceId] then
                     ["Ember"] = "Eternal Ember",
                 }
 
+                local function notify_learned(label)
+                    if cheat_client._learned_notified[label] then return end
+                    cheat_client._learned_notified[label] = true
+                    pcall(function()
+                        if library and library.Notify then
+                            library:Notify("ESP learned: " .. label, 5)
+                        end
+                    end)
+                end
+
                 local function register_learned_sig(label, part)
                     if not label or not part or not part:IsA("BasePart") then return end
                     local mid = mesh_digits(part)
                     local aid = asset_digits(part)
                     local col = tostring(part.Color)
-                    if mid and mid ~= "" and not SCROLL_MESH_IDS[mid] and not MESH_TRINKETS[mid] then
+                    local learned = false
+                    if mid and mid ~= "" and not (SCROLL_MESH_IDS and SCROLL_MESH_IDS[mid]) and not MESH_TRINKETS[mid] then
                         cheat_client.learned_mesh_trinkets[mid] = { label, "artifact" }
                         MESH_TRINKETS[mid] = { label, "artifact" }
+                        learned = true
+                    elseif mid and mid ~= "" and cheat_client.learned_mesh_trinkets[mid] == nil and MESH_TRINKETS[mid] == nil then
+                        cheat_client.learned_mesh_trinkets[mid] = { label, "artifact" }
+                        MESH_TRINKETS[mid] = { label, "artifact" }
+                        learned = true
                     end
-                    if aid and aid ~= "" and not ASSET_TRINKETS[aid] then
+                    if aid and aid ~= "" and ASSET_TRINKETS and not ASSET_TRINKETS[aid] then
                         ASSET_TRINKETS[aid] = { label, "artifact" }
+                        learned = true
                     end
                     -- unique-ish union/part colors (skip common white/gray click proxies)
                     if col ~= "0.639216, 0.635294, 0.647059" and col ~= "0.388235, 0.372549, 0.384314" then
                         local s = part.Size
                         if s.Magnitude > 0.15 and s.Magnitude < 8 then
-                            cheat_client.learned_color_trinkets[col] = cheat_client.learned_color_trinkets[col] or {
-                                name = label,
-                                size = { s.X, s.Y, s.Z },
-                                class = part.ClassName,
-                                material = tostring(part.Material),
-                            }
+                            if not cheat_client.learned_color_trinkets[col] then
+                                cheat_client.learned_color_trinkets[col] = {
+                                    name = label,
+                                    size = { s.X, s.Y, s.Z },
+                                    class = part.ClassName,
+                                    material = tostring(part.Material),
+                                }
+                                learned = true
+                            end
                         end
                     end
                     for _, d in ipairs(part:GetDescendants()) do
                         if d:IsA("ParticleEmitter") then
                             local rate = tonumber(d.Rate) or 0
-                            if rate > 0 and rate ~= 3 and rate ~= 5 then -- 3/5 already PD/Mysterious/Azael
+                            if rate > 0 and rate ~= 3 and rate ~= 5 then
                                 local key = string.format("%s|%s|%d", d.Name, tostring(d.Color), rate)
-                                cheat_client.learned_pe_trinkets[key] = {
-                                    name = label,
-                                    pe_name = d.Name,
-                                    rate = rate,
-                                    color = tostring(d.Color),
-                                }
+                                if not cheat_client.learned_pe_trinkets[key] then
+                                    cheat_client.learned_pe_trinkets[key] = {
+                                        name = label,
+                                        pe_name = d.Name,
+                                        rate = rate,
+                                        color = tostring(d.Color),
+                                    }
+                                    learned = true
+                                end
+                            end
+                        elseif d:IsA("BasePart") then
+                            local m2 = mesh_digits(d)
+                            if m2 and m2 ~= "" and not (SCROLL_MESH_IDS and SCROLL_MESH_IDS[m2]) and not MESH_TRINKETS[m2] then
+                                cheat_client.learned_mesh_trinkets[m2] = { label, "artifact" }
+                                MESH_TRINKETS[m2] = { label, "artifact" }
+                                learned = true
                             end
                         end
                     end
-                    -- also direct children PEs (Attachment nests)
-                    for _, d in ipairs(part:GetDescendants()) do
-                        if d:IsA("BasePart") then
-                            local m2 = mesh_digits(d)
-                            if m2 and m2 ~= "" and not SCROLL_MESH_IDS[m2] and not MESH_TRINKETS[m2] then
-                                cheat_client.learned_mesh_trinkets[m2] = { label, "artifact" }
-                                MESH_TRINKETS[m2] = { label, "artifact" }
-                            end
-                        end
+                    if learned then
+                        notify_learned(label)
                     end
                 end
 
