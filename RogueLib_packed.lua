@@ -1281,7 +1281,10 @@ end
 local function playerGuiIsHostile()
     local ok, hostile = pcall(function()
         local pid = game.PlaceId
-        if pid == 108194354348181 or pid == 112731528776884 then
+        if pid == 108194354348181 or pid == 114234929420007 or pid == 112731528776884 then
+            return true
+        end
+        if game.GameId == 7633926880 then
             return true
         end
         local n = string.lower(tostring(game.Name))
@@ -1296,8 +1299,21 @@ local function playerGuiIsHostile()
     return ok and hostile == true
 end
 
+-- Some executors' gethui() returns CoreGui.RobloxGui (a ScreenGui).
+-- Parenting another ScreenGui into it "succeeds" but the menu never draws.
+-- FOV (Drawing) still works, which is why games look like "FOV only".
+local function unwrapUiHost(dest)
+    local n = 0
+    while dest and typeof(dest) == "Instance" and dest:IsA("LayerCollector") and n < 6 do
+        dest = dest.Parent
+        n += 1
+    end
+    return dest or CoreGui
+end
+
 local function SafeParentUI(Instance: Instance, Parent: Instance | () -> Instance)
     local function trySet(dest)
+        dest = unwrapUiHost(dest)
         if not dest then
             return false
         end
@@ -1319,7 +1335,7 @@ local function SafeParentUI(Instance: Instance, Parent: Instance | () -> Instanc
             DestinationParent = Parent
         end
 
-        Instance.Parent = DestinationParent
+        Instance.Parent = unwrapUiHost(DestinationParent)
     end)
 
     if not (success and Instance.Parent) then
