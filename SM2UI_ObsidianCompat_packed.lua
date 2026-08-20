@@ -24,7 +24,7 @@ local function http_get(url)
 	return game:HttpGet(url)
 end
 
-local LIB_URL = "https://raw.githubusercontent.com/KScroom/universal-duels/master/RogueLib_packed.lua?v=obs3"
+local LIB_URL = "https://raw.githubusercontent.com/KScroom/universal-duels/master/RogueLib_packed.lua?v=obs4"
 local Library
 do
 	local src = http_get(LIB_URL)
