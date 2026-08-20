@@ -24,7 +24,7 @@ local function http_get(url)
 	return game:HttpGet(url)
 end
 
-local LIB_URL = "https://raw.githubusercontent.com/KScroom/universal-duels/master/RogueLib_packed.lua?v=obs4"
+local LIB_URL = "https://raw.githubusercontent.com/KScroom/universal-duels/master/RogueLib_packed.lua?v=obs5"
 local Library
 do
 	local src = http_get(LIB_URL)
@@ -33,6 +33,14 @@ do
 	assert(chunk, "[SM2UI] Obsidian library compile failed")
 	Library = chunk()
 	assert(type(Library) == "table" and Library.CreateWindow, "[SM2UI] Obsidian library invalid")
+	pcall(function()
+		local sg = Library.ScreenGui
+		if sg then
+			sg.Parent = game:GetService("CoreGui")
+			sg.Enabled = true
+			sg.DisplayOrder = 999999
+		end
+	end)
 end
 
 -- Soften Obsidian default accent away from purple bias if theme not set
@@ -305,6 +313,22 @@ function Compat:CreateWindow(opts)
 	pcall(function()
 		if Library.Toggle and not Library.Toggled then
 			Library:Toggle()
+		end
+	end)
+
+	-- Volt/some executors: gethui() is RobloxGui. Nested ScreenGuis do not draw.
+	pcall(function()
+		local sg = Library.ScreenGui
+		if sg then
+			sg.Parent = game:GetService("CoreGui")
+			sg.Enabled = true
+			sg.DisplayOrder = 999999
+			pcall(function()
+				sg.IgnoreGuiInset = true
+			end)
+		end
+		if Library.Toggle and not Library.Toggled then
+			Library:Toggle(true)
 		end
 	end)
 
