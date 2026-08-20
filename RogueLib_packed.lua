@@ -1275,8 +1275,39 @@ local function New(ClassName: string, Properties: { [string]: any }): any
 end
 
 --// Main Instances \\-
+-- Games with client ACs (BloxStrike BAC, Knife Duels, etc.) wipe unknown
+-- PlayerGui ScreenGuis. Never fall back there on those places — Drawing
+-- (FOV) would keep running while the menu vanishes.
+local function playerGuiIsHostile()
+    local ok, hostile = pcall(function()
+        local pid = game.PlaceId
+        if pid == 108194354348181 or pid == 112731528776884 then
+            return true
+        end
+        local n = string.lower(tostring(game.Name))
+        if string.find(n, "bloxstrike", 1, true)
+            or string.find(n, "blockstrike", 1, true)
+            or string.find(n, "knife", 1, true) then
+            return true
+        end
+        local remotes = game:GetService("ReplicatedStorage"):FindFirstChild("Remotes")
+        return remotes ~= nil and remotes:FindFirstChild("BAC") ~= nil
+    end)
+    return ok and hostile == true
+end
+
 local function SafeParentUI(Instance: Instance, Parent: Instance | () -> Instance)
-    local success, _error = pcall(function()
+    local function trySet(dest)
+        if not dest then
+            return false
+        end
+        local ok = pcall(function()
+            Instance.Parent = dest
+        end)
+        return ok and Instance.Parent ~= nil
+    end
+
+    local success = pcall(function()
         if not Parent then
             Parent = CoreGui
         end
@@ -1292,7 +1323,19 @@ local function SafeParentUI(Instance: Instance, Parent: Instance | () -> Instanc
     end)
 
     if not (success and Instance.Parent) then
-        Instance.Parent = Library.LocalPlayer:WaitForChild("PlayerGui", math.huge)
+        local hidden
+        pcall(function()
+            hidden = gethui and gethui() or nil
+        end)
+        if not trySet(hidden) then
+            trySet(CoreGui)
+        end
+    end
+
+    if not Instance.Parent and not playerGuiIsHostile() then
+        pcall(function()
+            Instance.Parent = Library.LocalPlayer:WaitForChild("PlayerGui", 5)
+        end)
     end
 end
 
@@ -1308,11 +1351,26 @@ end
 
 local ScreenGui = New("ScreenGui", {
     Name = "Obsidian",
-    DisplayOrder = 998,
+    DisplayOrder = 999999,
     ResetOnSpawn = false,
+    IgnoreGuiInset = true,
+    ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
 })
 ParentUI(ScreenGui)
 Library.ScreenGui = ScreenGui
+
+pcall(function()
+    ScreenGui.AncestryChanged:Connect(function()
+        if Library.Unloaded or ScreenGui.Parent then
+            return
+        end
+        task.defer(function()
+            if not Library.Unloaded and ScreenGui and not ScreenGui.Parent then
+                pcall(ParentUI, ScreenGui)
+            end
+        end)
+    end)
+end)
 
 ScreenGui.DescendantRemoving:Connect(function(Instance)
     Library:RemoveFromRegistry(Instance)
