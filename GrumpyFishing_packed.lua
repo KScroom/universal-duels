@@ -13,7 +13,77 @@ local RunService = game:GetService("RunService")
 local HttpService = game:GetService("HttpService")
 
 local genv = (type(getgenv) == "function" and getgenv()) or _G
+if genv.GrumpyFishingShutdown then
+	pcall(genv.GrumpyFishingShutdown)
+end
+
 local SCRIPT_URL = "https://raw.githubusercontent.com/KScroom/universal-duels/master/GrumpyFishing_packed.lua"
+local CFG_FILE = "GrumpyFishing.cfg"
+local AUTOEXEC_NAME = "GrumpyFishing.lua"
+local AUTOEXEC_PATHS = {
+	"autoexec/" .. AUTOEXEC_NAME,
+	"Autoexec/" .. AUTOEXEC_NAME,
+	"autoexecute/" .. AUTOEXEC_NAME,
+}
+local AUTOEXEC_BOOT = [[
+if getgenv and getgenv().GrumpyFishingLoaded then return end
+loadstring(game:HttpGet("]] .. SCRIPT_URL .. [[?v=" .. tostring(tick())))()
+]]
+
+local function autoExecEnabled()
+	local on = false
+	pcall(function()
+		if isfile and isfile(CFG_FILE) and readfile(CFG_FILE) == "1" then
+			on = true
+		end
+	end)
+	if not on then
+		pcall(function()
+			if isfile and isfile("autoexec/" .. AUTOEXEC_NAME) then
+				on = true
+			end
+		end)
+	end
+	return on
+end
+
+local function setAutoExec(on)
+	if on then
+		pcall(function()
+			if makefolder and (not isfolder or not isfolder("autoexec")) then
+				makefolder("autoexec")
+			end
+		end)
+		pcall(function()
+			if makefolder and (not isfolder or not isfolder("Autoexec")) then
+				makefolder("Autoexec")
+			end
+		end)
+		local wrote = false
+		for _, path in ipairs(AUTOEXEC_PATHS) do
+			if pcall(function()
+				writefile(path, AUTOEXEC_BOOT)
+			end) then
+				wrote = true
+			end
+		end
+		pcall(function()
+			writefile(CFG_FILE, "1")
+		end)
+		return wrote
+	end
+	for _, path in ipairs(AUTOEXEC_PATHS) do
+		pcall(function()
+			if isfile and isfile(path) then
+				delfile(path)
+			end
+		end)
+	end
+	pcall(function()
+		writefile(CFG_FILE, "0")
+	end)
+	return true
+end
 local player = Players.LocalPlayer
 local character = player.Character or player.CharacterAdded:Wait()
 local humanoid = character and character:FindFirstChildOfClass("Humanoid")
@@ -104,9 +174,13 @@ local function shutdown()
 	if screenGui then
 		screenGui:Destroy()
 	end
+	if genv then
+		genv.GrumpyFishingLoaded = false
+		genv.GrumpyFishingShutdown = nil
+	end
 end
 
-local FRAME_H = 430
+local FRAME_H = 468
 local mainFrame = Instance.new("Frame")
 mainFrame.Size = UDim2.new(0, 260, 0, FRAME_H)
 mainFrame.Position = UDim2.new(0, 20, 0.5, -140)
@@ -439,6 +513,23 @@ lowPopButton.LayoutOrder = 16
 lowPopButton.Parent = content
 Instance.new("UICorner", lowPopButton).CornerRadius = UDim.new(0, 6)
 
+local autoExecButton = Instance.new("TextButton")
+autoExecButton.Size = UDim2.new(1, 0, 0, 28)
+autoExecButton.Font = Enum.Font.GothamBold
+autoExecButton.TextSize = 12
+autoExecButton.TextColor3 = Color3.new(1, 1, 1)
+autoExecButton.BorderSizePixel = 0
+autoExecButton.LayoutOrder = 17
+autoExecButton.Parent = content
+Instance.new("UICorner", autoExecButton).CornerRadius = UDim.new(0, 6)
+
+local autoExecOn = autoExecEnabled()
+local function updateAutoExecButton()
+	autoExecButton.Text = autoExecOn and "AutoExecute: ON" or "AutoExecute: OFF"
+	autoExecButton.BackgroundColor3 = autoExecOn and Color3.fromRGB(0, 130, 180) or Color3.fromRGB(60, 60, 75)
+end
+updateAutoExecButton()
+
 for _, button in pairs({ hopButton, lowPopButton }) do
 	button.MouseEnter:Connect(function()
 		TweenService:Create(button, TweenInfo.new(0.1), {
@@ -456,6 +547,25 @@ local function setStatus(text, color)
 	statusLabel.Text = "Status: " .. text
 	statusLabel.TextColor3 = color or Color3.fromRGB(150, 150, 160)
 end
+
+autoExecButton.MouseButton1Click:Connect(function()
+	if not writefile then
+		setStatus("No writefile on executor", Color3.fromRGB(255, 120, 80))
+		return
+	end
+	autoExecOn = not autoExecOn
+	local ok = setAutoExec(autoExecOn)
+	if autoExecOn and not ok then
+		autoExecOn = false
+		setAutoExec(false)
+		setStatus("Could not write autoexec", Color3.fromRGB(255, 80, 80))
+	elseif autoExecOn then
+		setStatus("AutoExecute ON — runs on inject", Color3.fromRGB(100, 220, 100))
+	else
+		setStatus("AutoExecute OFF", Color3.fromRGB(180, 180, 180))
+	end
+	updateAutoExecButton()
+end)
 
 local function updateToggleButton()
 	if fishing then
@@ -1279,4 +1389,7 @@ if getgenv().GrumpyFishingResume then
 	task.delay(1.2, resumeAfterHop)
 end
 
-print("[Grumpy Fishing] Loaded (menu hop + auto-execute)")
+genv.GrumpyFishingLoaded = true
+genv.GrumpyFishingShutdown = shutdown
+
+print("[Grumpy Fishing] Loaded (menu hop + AutoExecute)")
