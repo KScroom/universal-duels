@@ -1,5 +1,5 @@
 -- PTDE Artifact ESP (standalone)
--- End = toggle ESP. AutoExecute writes to executor autoexec folder (IY-style).
+-- P = toggle ESP. AutoExecute writes to executor autoexec folder (IY-style).
 -- Off fully disconnects and destroys drawings so nothing runs in the background.
 
 if getgenv and getgenv().PTDEArtESPLoaded then
@@ -9,7 +9,7 @@ if getgenv then
 	getgenv().PTDEArtESPLoaded = true
 end
 
-local TOGGLE_KEY = Enum.KeyCode.End
+local TOGGLE_KEY = Enum.KeyCode.P
 local SCRIPT_URL = "https://raw.githubusercontent.com/KScroom/universal-duels/master/PTDE_ArtifactESP_packed.lua"
 local CFG_FILE = "PTDEArtESP.cfg"
 local AUTOEXEC_NAME = "PTDEArtESP.lua"
@@ -932,7 +932,7 @@ local pHint = Instance.new("TextLabel")
 pHint.Size = UDim2.new(1, -12, 0, 16)
 pHint.Position = UDim2.new(0, 8, 0, 28)
 pHint.BackgroundTransparency = 1
-pHint.Text = "END toggles ESP"
+pHint.Text = "P toggles ESP"
 pHint.Font = Enum.Font.Gotham
 pHint.TextSize = 11
 pHint.TextColor3 = Color3.fromRGB(160, 160, 170)
@@ -982,4 +982,4 @@ autoBtn.MouseButton1Click:Connect(function()
 	paintAuto()
 end)
 
-notify("Artifact ESP loaded  —  press END", Color3.fromRGB(160, 200, 255))
+notify("Artifact ESP loaded  —  press P", Color3.fromRGB(160, 200, 255))
