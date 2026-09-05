@@ -2,8 +2,8 @@
 -- P = toggle ESP. AutoExecute writes to executor autoexec folder (IY-style).
 -- Off fully disconnects and destroys drawings so nothing runs in the background.
 
-if getgenv and getgenv().PTDEArtESPLoaded then
-	return
+if getgenv and getgenv().PTDEArtESPDestroy then
+	pcall(getgenv().PTDEArtESPDestroy)
 end
 if getgenv then
 	getgenv().PTDEArtESPLoaded = true
@@ -114,6 +114,7 @@ local gen = 0
 local objects = {}
 local connections = {}
 local queued = {}
+local hookedFolders = {}
 local holder
 local toastGui
 local renderConn
@@ -258,34 +259,74 @@ local function digits(raw)
 	return tostring(raw or ""):gsub("%%20", ""):gsub("%s+", ""):match("%d+")
 end
 
+-- Roblox moved MeshId / AssetId onto Content; tostring() often has no digits.
+local function contentDigits(value)
+	if value == nil then
+		return nil
+	end
+	local id
+	pcall(function()
+		local t = typeof(value)
+		if t == "Content" then
+			local uri = ""
+			pcall(function()
+				uri = value.Uri or ""
+			end)
+			id = digits(uri) or digits(tostring(value))
+			return
+		end
+		id = digits(tostring(value))
+	end)
+	return id
+end
+
 local function meshDigits(inst)
 	if not inst then
 		return nil
 	end
-	local ok, mid = pcall(function()
+	local id
+	pcall(function()
 		if inst:IsA("MeshPart") then
-			local id = digits(inst.MeshId)
-			if id then
-				return id
+			if inst.MeshContent ~= nil then
+				id = contentDigits(inst.MeshContent)
+			end
+			if not id then
+				id = contentDigits(inst.MeshId)
 			end
 		end
-		local sm = inst:FindFirstChildWhichIsA("SpecialMesh") or inst:FindFirstChild("Mesh")
-		if sm then
-			return digits(sm.MeshId)
+		if not id then
+			local sm = inst:FindFirstChildWhichIsA("SpecialMesh") or inst:FindFirstChild("Mesh")
+			if sm then
+				if sm.MeshContent ~= nil then
+					id = contentDigits(sm.MeshContent)
+				end
+				if not id then
+					id = contentDigits(sm.MeshId)
+				end
+			end
 		end
-		return nil
 	end)
-	return ok and mid or nil
+	return id
 end
 
 local function assetDigits(inst)
-	if not inst or not gethiddenproperty then
+	if not inst then
 		return nil
 	end
-	local ok, aid = pcall(function()
-		return digits(gethiddenproperty(inst, "AssetId"))
-	end)
-	return ok and aid or nil
+	local id
+	if gethiddenproperty then
+		pcall(function()
+			id = contentDigits(gethiddenproperty(inst, "AssetId"))
+		end)
+	end
+	if not id then
+		pcall(function()
+			if inst.AssetId ~= nil then
+				id = contentDigits(inst.AssetId)
+			end
+		end)
+	end
+	return id
 end
 
 local function firstAttachmentPe(part)
@@ -360,12 +401,23 @@ local function detectEmber(root)
 	return false
 end
 
+local LOOT_FOLDER_NAMES = {
+	Dinkets = true,
+	Trinkets = true,
+	Artifacts = true,
+	WorldDinkets = true,
+}
+
+local function isLootFolder(inst)
+	return inst ~= nil and LOOT_FOLDER_NAMES[inst.Name] == true
+end
+
 local function dinketRoot(object)
 	local p = object
-	while p and p.Parent and p.Parent.Name ~= "Dinkets" do
+	while p and p.Parent and not isLootFolder(p.Parent) do
 		p = p.Parent
 	end
-	if p and p.Parent and p.Parent.Name == "Dinkets" then
+	if p and p.Parent and isLootFolder(p.Parent) then
 		return p
 	end
 	return object
@@ -504,17 +556,9 @@ local function identify(object)
 		return "Eternal Ember", "artifact"
 	end
 
-	local n, t = tryName(object)
-	if n then
-		return n, t
-	end
-	n, t = tryName(object.Parent)
-	if n then
-		return n, t
-	end
-
-	if object.Name == "ClickPart" and object.Parent and object.Parent.Name ~= "Dinkets" then
-		n, t = identifyPart(object.Parent)
+	-- Mesh / particles first. Generic names like "Amulet" used to win and hide real artifacts.
+	if object.Name == "ClickPart" and object.Parent and not isLootFolder(object.Parent) then
+		local n, t = identifyPart(object.Parent)
 		if n then
 			return n, t
 		end
@@ -526,7 +570,7 @@ local function identify(object)
 		end
 	end
 
-	n, t = identifyPart(object)
+	local n, t = identifyPart(object)
 	if n then
 		return n, t
 	end
@@ -537,17 +581,22 @@ local function identify(object)
 			if n then
 				return n, t
 			end
-			n, t = tryName(d)
-			if n then
-				return n, t
-			end
 		end
+	end
+
+	n, t = tryName(object)
+	if n and SHOW[t] then
+		return n, t
+	end
+	n, t = tryName(object.Parent)
+	if n and SHOW[t] then
+		return n, t
 	end
 
 	local p = object.Parent
 	while p and p ~= Workspace do
 		n, t = tryName(p)
-		if n then
+		if n and SHOW[t] then
 			return n, t
 		end
 		if p:IsA("BasePart") then
@@ -556,10 +605,19 @@ local function identify(object)
 				return n, t
 			end
 		end
-		if p.Name == "Dinkets" then
+		if isLootFolder(p) then
 			break
 		end
 		p = p.Parent
+	end
+
+	n, t = tryName(object)
+	if n then
+		return n, t
+	end
+	n, t = tryName(object.Parent)
+	if n then
+		return n, t
 	end
 
 	return nil, nil
@@ -568,7 +626,7 @@ end
 local function underDinkets(object)
 	local p = object
 	while p and p ~= Workspace do
-		if p.Name == "Dinkets" then
+		if isLootFolder(p) then
 			return true
 		end
 		p = p.Parent
@@ -588,22 +646,30 @@ local function getClickPart(object)
 		return cp
 	end
 	local p = object
-	while p and p.Parent and p.Parent.Name ~= "Dinkets" do
+	while p and p.Parent and not isLootFolder(p.Parent) do
 		p = p.Parent
 	end
-	if p and p.Parent and p.Parent.Name == "Dinkets" then
+	if p and p.Parent and isLootFolder(p.Parent) then
 		cp = p:FindFirstChild("ClickPart", true)
 		if cp and cp:IsA("BasePart") then
 			return cp
 		end
+		local cd = p:FindFirstChildWhichIsA("ClickDetector", true)
+		if cd and cd.Parent and cd.Parent:IsA("BasePart") then
+			return cd.Parent
+		end
 		if p:IsA("BasePart") then
 			return p
+		end
+		local any = p:FindFirstChildWhichIsA("BasePart", true)
+		if any then
+			return any
 		end
 	end
 	if object:IsA("BasePart") then
 		return object
 	end
-	return nil
+	return object:FindFirstChildWhichIsA("BasePart", true)
 end
 
 local function classify(object)
@@ -616,7 +682,7 @@ local function classify(object)
 	end
 	if not name or not tier then
 		local parent = object.Parent
-		if parent and parent ~= Workspace and parent.Name ~= "Dinkets" and parent.Name ~= "Part" and parent.Name ~= "ClickPart" and parent.Name ~= "" then
+		if parent and parent ~= Workspace and not isLootFolder(parent) and parent.Name ~= "Part" and parent.Name ~= "ClickPart" and parent.Name ~= "" then
 			name = parent.Name
 			tier = NAME_TIER[name] or "event"
 		else
@@ -673,6 +739,8 @@ local function addEsp(click, name, tier)
 	local gui = Instance.new("BillboardGui")
 	gui.Name = "PTDEArtESP"
 	gui.AlwaysOnTop = true
+	gui.MaxDistance = 20000
+	gui.LightInfluence = 0
 	gui.Size = UDim2.new(0, 220, 0, 36)
 	gui.StudsOffset = Vector3.new(0, 2.4, 0)
 	gui.Adornee = click
@@ -692,7 +760,7 @@ local function addEsp(click, name, tier)
 	pcall(function()
 		hl = Instance.new("Highlight")
 		hl.Name = "PTDEArtESP"
-		hl.Adornee = click.Parent ~= Workspace and click.Parent.Name ~= "Dinkets" and click.Parent or click
+		hl.Adornee = click.Parent ~= Workspace and not isLootFolder(click.Parent) and click.Parent or click
 		hl.FillTransparency = 0.7
 		hl.OutlineTransparency = 0
 		hl.FillColor = COLORS[tier] or COLORS.event
@@ -756,10 +824,39 @@ local function queue(object)
 	end)
 end
 
+local function findLootFolders()
+	local out, seen = {}, {}
+	local function add(folder)
+		if folder and not seen[folder] and isLootFolder(folder) then
+			seen[folder] = true
+			out[#out + 1] = folder
+		end
+	end
+	add(Workspace:FindFirstChild("Dinkets"))
+	add(Workspace:FindFirstChild("Trinkets"))
+	add(Workspace:FindFirstChild("Artifacts"))
+	pcall(function()
+		add(Workspace:FindFirstChild("Dinkets", true))
+		add(Workspace:FindFirstChild("Trinkets", true))
+		add(Workspace:FindFirstChild("Artifacts", true))
+		add(Workspace:FindFirstChild("WorldDinkets", true))
+	end)
+	for _, child in ipairs(Workspace:GetChildren()) do
+		add(child)
+		pcall(function()
+			add(child:FindFirstChild("Dinkets"))
+			add(child:FindFirstChild("Trinkets"))
+			add(child:FindFirstChild("Artifacts"))
+		end)
+	end
+	return out
+end
+
 local function hookFolder(folder)
-	if not folder then
+	if not folder or hookedFolders[folder] then
 		return
 	end
+	hookedFolders[folder] = true
 	track(folder.ChildAdded:Connect(function(child)
 		if enabled then
 			queue(child)
@@ -776,19 +873,20 @@ local function hookFolder(folder)
 end
 
 local function scanAll(myGen)
-	local dinkets = Workspace:FindFirstChild("Dinkets")
-	if not dinkets then
-		return
-	end
 	local n = 0
-	for _, root in ipairs(dinkets:GetChildren()) do
+	for _, dinkets in ipairs(findLootFolders()) do
 		if not enabled or myGen ~= gen then
 			return
 		end
-		apply(root:FindFirstChild("ClickPart", true) or root)
-		n += 1
-		if n % 40 == 0 then
-			task.wait()
+		for _, root in ipairs(dinkets:GetChildren()) do
+			if not enabled or myGen ~= gen then
+				return
+			end
+			apply(root:FindFirstChild("ClickPart", true) or root)
+			n += 1
+			if n % 40 == 0 then
+				task.wait()
+			end
 		end
 	end
 end
@@ -798,6 +896,7 @@ local function startRender()
 		return
 	end
 	local acc = 0
+	local scanAcc = 0
 	renderConn = RunService.Heartbeat:Connect(function(dt)
 		if not enabled then
 			return
@@ -818,6 +917,14 @@ local function startRender()
 				esp.label.Text = esp.name .. "\n[" .. dist .. "]"
 			end
 		end
+		scanAcc += 0.2
+		if scanAcc >= 2 then
+			scanAcc = 0
+			for _, folder in ipairs(findLootFolders()) do
+				hookFolder(folder)
+			end
+			task.spawn(scanAll, gen)
+		end
 	end)
 end
 
@@ -835,6 +942,7 @@ local function stopAll()
 	end
 	table.clear(connections)
 	table.clear(queued)
+	table.clear(hookedFolders)
 	for _, esp in pairs(objects) do
 		destroyEsp(esp)
 	end
@@ -851,16 +959,33 @@ local function startAll()
 	gen += 1
 	local myGen = gen
 
-	holder = Instance.new("Folder")
+	holder = Instance.new("ScreenGui")
 	holder.Name = "PTDEArtESP"
+	holder.ResetOnSpawn = false
+	holder.IgnoreGuiInset = true
+	holder.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 	holder.Parent = guiParent()
 
 	notify("Loading artifact ESP...", Color3.fromRGB(255, 220, 80))
-	hookFolder(Workspace:FindFirstChild("Dinkets"))
+	local folders = findLootFolders()
+	if #folders == 0 then
+		notify("No Dinkets folder yet — waiting...", Color3.fromRGB(255, 180, 80))
+	end
+	for _, folder in ipairs(folders) do
+		hookFolder(folder)
+	end
 	track(Workspace.ChildAdded:Connect(function(obj)
-		if obj.Name == "Dinkets" then
+		if isLootFolder(obj) then
 			hookFolder(obj)
 			task.spawn(scanAll, myGen)
+		else
+			pcall(function()
+				local nested = obj:FindFirstChild("Dinkets") or obj:FindFirstChild("Trinkets")
+				if nested then
+					hookFolder(nested)
+					task.spawn(scanAll, myGen)
+				end
+			end)
 		end
 	end))
 	startRender()
@@ -983,3 +1108,16 @@ autoBtn.MouseButton1Click:Connect(function()
 end)
 
 notify("Artifact ESP loaded  —  press P", Color3.fromRGB(160, 200, 255))
+
+if getgenv then
+	getgenv().PTDEArtESPDestroy = function()
+		pcall(stopAll)
+		pcall(function()
+			if panelGui then
+				panelGui:Destroy()
+			end
+		end)
+		getgenv().PTDEArtESPLoaded = nil
+		getgenv().PTDEArtESPDestroy = nil
+	end
+end
