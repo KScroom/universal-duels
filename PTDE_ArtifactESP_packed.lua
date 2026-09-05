@@ -31,7 +31,14 @@ local COLORS = {
 	none = Color3.fromRGB(40, 40, 40),
 }
 
-local SHOW = { mythic = true, artifact = true, event = true }
+local SHOW = {
+	mythic = true,
+	artifact = true,
+	event = true,
+	common = true,
+	rare = true,
+	none = true,
+}
 
 local NAME_TIER = {
 	["Rift Gem"] = "mythic",
@@ -408,6 +415,18 @@ local LOOT_FOLDER_NAMES = {
 	WorldDinkets = true,
 }
 
+local SKIP_ANCESTORS = {
+	Live = true,
+	NPCs = true,
+	NPC = true,
+	Camera = true,
+	CurrentCamera = true,
+	Thrown = true,
+	Effects = true,
+	Debris = true,
+	Characters = true,
+}
+
 local function isLootFolder(inst)
 	return inst ~= nil and LOOT_FOLDER_NAMES[inst.Name] == true
 end
@@ -537,14 +556,43 @@ local function collectParts(root)
 		return parts
 	end
 	add(root)
-	for _, d in ipairs(root:GetDescendants()) do
-		if d:IsA("BasePart") then
-			add(d)
-		elseif d:IsA("Weld") or d:IsA("WeldConstraint") or d:IsA("ManualWeld") then
-			pcall(function()
+	pcall(function()
+		for _, d in ipairs(root:GetDescendants()) do
+			if d:IsA("BasePart") then
+				add(d)
+			elseif d:IsA("Weld") or d:IsA("WeldConstraint") or d:IsA("ManualWeld") then
 				add(d.Part0)
 				add(d.Part1)
-			end)
+			end
+		end
+	end)
+	-- ClickPart is often welded to a MeshPart that is NOT a descendant
+	pcall(function()
+		if root:IsA("BasePart") then
+			for _, p in ipairs(root:GetConnectedParts(true)) do
+				add(p)
+			end
+		end
+		local click = root:FindFirstChild("ClickPart", true)
+		if click and click:IsA("BasePart") then
+			for _, p in ipairs(click:GetConnectedParts(true)) do
+				add(p)
+			end
+		end
+	end)
+	if root:IsA("BasePart") and #parts <= 2 then
+		local ok, nearby = pcall(function()
+			return Workspace:GetPartBoundsInRadius(root.Position, 5)
+		end)
+		if ok and nearby then
+			for _, p in ipairs(nearby) do
+				if p:IsA("MeshPart") or p:IsA("UnionOperation") or p:FindFirstChildWhichIsA("SpecialMesh") or p:FindFirstChild("Mesh") then
+					add(p)
+				end
+				if #parts >= 12 then
+					break
+				end
+			end
 		end
 	end
 	return parts
@@ -630,6 +678,57 @@ local function underDinkets(object)
 			return true
 		end
 		p = p.Parent
+	end
+	return false
+end
+
+local function isJunk(object)
+	if not object then
+		return true
+	end
+	local p = object
+	while p and p ~= Workspace do
+		if SKIP_ANCESTORS[p.Name] then
+			return true
+		end
+		if p:FindFirstChildWhichIsA("Humanoid") then
+			return true
+		end
+		p = p.Parent
+	end
+	return false
+end
+
+local function hasTrinketId(object)
+	if not object then
+		return false
+	end
+	if object:FindFirstChild("ID") then
+		return true
+	end
+	if object.Parent and object.Parent ~= Workspace and object.Parent:FindFirstChild("ID") then
+		return true
+	end
+	return false
+end
+
+local function isWorldTrinket(object)
+	if not object or isJunk(object) then
+		return false
+	end
+	if underDinkets(object) then
+		return true
+	end
+	if hasTrinketId(object) then
+		return true
+	end
+	if object.Name == "ClickPart" then
+		return true
+	end
+	if object:IsA("BasePart") and object:FindFirstChildWhichIsA("ClickDetector") then
+		if object.Name == "Part" or object.Name == "ClickPart" or hasTrinketId(object) then
+			return true
+		end
 	end
 	return false
 end
@@ -783,11 +882,14 @@ local function apply(object)
 	if not enabled or not object then
 		return
 	end
-	if not underDinkets(object) then
+	if not isWorldTrinket(object) then
 		return
 	end
 	local click = getClickPart(object)
 	if not click then
+		return
+	end
+	if isJunk(click) then
 		return
 	end
 	local name, tier = classify(click)
@@ -874,18 +976,32 @@ end
 
 local function scanAll(myGen)
 	local n = 0
+	local function consider(obj)
+		if not enabled or myGen ~= gen then
+			return false
+		end
+		apply(obj)
+		n += 1
+		if n % 40 == 0 then
+			task.wait()
+		end
+		return true
+	end
 	for _, dinkets in ipairs(findLootFolders()) do
+		for _, root in ipairs(dinkets:GetChildren()) do
+			if not consider(root:FindFirstChild("ClickPart", true) or root) then
+				return
+			end
+		end
+	end
+	-- Classic Rogue Lineage: Workspace.Part with an ID child
+	for _, child in ipairs(Workspace:GetChildren()) do
 		if not enabled or myGen ~= gen then
 			return
 		end
-		for _, root in ipairs(dinkets:GetChildren()) do
-			if not enabled or myGen ~= gen then
+		if child:FindFirstChild("ID") or (child.Name == "Part" and child:FindFirstChildWhichIsA("ClickDetector")) then
+			if not consider(child) then
 				return
-			end
-			apply(root:FindFirstChild("ClickPart", true) or root)
-			n += 1
-			if n % 40 == 0 then
-				task.wait()
 			end
 		end
 	end
@@ -978,6 +1094,8 @@ local function startAll()
 		if isLootFolder(obj) then
 			hookFolder(obj)
 			task.spawn(scanAll, myGen)
+		elseif obj:FindFirstChild("ID") or obj.Name == "Part" then
+			queue(obj)
 		else
 			pcall(function()
 				local nested = obj:FindFirstChild("Dinkets") or obj:FindFirstChild("Trinkets")
